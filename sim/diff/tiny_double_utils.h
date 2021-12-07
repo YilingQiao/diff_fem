@@ -1,0 +1,91 @@
+#ifndef DOUBLE_UTILS_H
+#define DOUBLE_UTILS_H
+
+#define _USE_MATH_DEFINES 1
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <string>
+
+#include "math.h"
+
+struct DoubleUtils {
+  static double zero() { return 0.; }
+  static double one() { return 1.; }
+
+  static double two() { return 2.; }
+  static double half() { return 0.5; }
+  static double pi() { return M_PI; }
+  static double half_pi() { return M_PI / 2.; }
+
+  static double cos1(double v) { return ::cos(v); }
+  static double sin1(double v) { return ::sin(v); }
+  static double atan2(double dy, double dx) { return ::atan2(dy, dx); }
+  static double asin(double v) { return ::asin(v); }
+  static double copysign(double x, double y) { return ::copysign(x, y); }
+  static double abs(double v) { return ::fabs(v); }
+  static double pow(double a, double b) { return ::pow(a, b); }
+  static double exp(double v) { return ::exp(v); }
+  static double log(double v) { return ::log(v); }
+  static double tanh(double v) { return ::tanh(v); }
+  static double min1(double a, double b) { return a < b ? a : b; }
+  static double max1(double a, double b) { return a > b ? a : b; }
+  static double max(double a, double b) { return a > b ? a : b; }
+  static double min(double a, double b) { return a < b ? a : b; }
+
+
+  template <class T>
+  static T sqrt1(T v) {
+    return sqrt(v);
+  }
+
+
+  template <class T>
+  static T abs1(const T& v) {
+    using std::abs;
+    return abs(v);
+  }
+
+  template <class T>
+  static T exp1(const T& v) {
+    using std::exp;
+    return exp(v);
+  }
+
+  static bool getBool(bool v) {  return v; }
+
+  template <class T>
+  static double getDouble(T v) {
+    return (double)v;
+  }
+
+  template <class T>
+  static double convert(T) = delete;  // C++11
+
+  static double convert(int value) { return double(value); }
+
+  template <class T>
+  static double fraction(T, T) = delete;  // C++11
+
+  static double fraction(int num, int denom) {
+    return double(num) / double(denom);
+  }
+
+  static double scalar_from_string(const std::string& txt) {
+    double result = atof(txt.c_str());
+    return result;
+  }
+
+  static double scalar_from_double(double value) { return value; }
+
+  static void FullAssert(bool a) {
+    if (!a) {
+      printf("!");
+      assert(0);
+      exit(0);
+    }
+  }
+};
+
+#endif  // DOUBLE_UTILS_H
