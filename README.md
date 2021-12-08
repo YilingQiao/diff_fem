@@ -10,7 +10,7 @@ The C++ backend simulator files are in `./sim/` and `./utils/`. We will soon upd
 
 ## Our Related Repos
 Differentiable Soft Body Dynamics (this repo) [Code](https://github.com/YilingQiao/diff_fem) [Paper](http://vladlen.info/publications/differentiable-simulation-soft-multi-body-systems/)
-*Differentiable Simulation of Soft Multi-body Systems. Yi-Ling Qiao, Junbang Liang, Vladlen Koltun, Ming C. Lin. (ICML 2021)*
+*Differentiable Simulation of Soft Multi-body Systems. Yi-Ling Qiao, Junbang Liang, Vladlen Koltun, Ming C. Lin. (Neurips 2021)*
 
 Differentiable Articulated Body Dynamics [Code](https://github.com/YilingQiao/diffarticulated) [Paper](https://arxiv.org/abs/2109.07719)
 *Efficient Differentiable Simulation of Articulated Bodies. Yi-Ling Qiao, Junbang Liang, Vladlen Koltun, Ming C. Lin. (ICML 2021)*
