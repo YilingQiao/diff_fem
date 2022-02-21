@@ -1,0 +1,42 @@
+{
+    "Parameters" : {
+        "Self-collision" : false,
+        "Self-collision tolerance" : 5.0e-2,
+        "Gravity" : [0.0, 0.0, -9.81],
+        "Air damping" : 0.0e-5
+    },
+    
+    "Friction coefficients" : [
+        [ 0.1 ]
+    ],
+    
+    "Meshes" : [
+        {
+            "Obj filename" : "mesh/drape.obj",
+            "Area Density" : 3.0,
+            "Bending" : 5e-4,
+            "Stretching" : 2e2,
+            "Material Identifier" : 0
+        }
+        
+    ],
+    "Obstacles" : [
+        {
+            "Type" : "Moving Mesh",
+            "Obj Prefix" : "mesh/rotating_sphere/sphere_",
+            "Obj Suffix" : ".obj",
+            "Suffix Size" : 3,
+            "Number Frame" : 200,
+            "Material Identifier" : 0,
+            "Time Between Frame" : 35e-3,
+            "Collision tolerance" : 1.5e-2
+        },
+        {
+            "Type" : "Plane",
+            "Point" : [ 0.0, 0.0, -1.0 ],
+            "Normal" : [ 0.0, 0.0, 1.0 ],
+            "Material Identifier" : 0
+        }
+
+    ]
+}

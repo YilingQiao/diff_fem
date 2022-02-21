@@ -1,0 +1,33 @@
+{
+    "Parameters" : [
+        {
+            "Simulation HZ" : 200,
+            "Handle collision" : false,
+            "Gravity": [0, 0, 0],
+            "Self-collision" : false,
+            "Self-collision tolerance" : 5.0e-2,
+            "Is underwater": 1
+        }
+    ],
+    
+    "Friction coefficients" : [
+        [ 0.1 ]
+    ],
+    
+    "Meshes" : [
+        {
+            "Obj filename" : "octopus.obj",
+            "Muscle filename" : "octopus.muscle",
+            "Sampling filename" : "octopus.sampling",
+            "Center Index": 63,
+            "Actuator type": 2,
+            "End Effector Index": 330,
+            "Local Contour Index": [63, 68, 85],
+            "Type": "Soft Articulated",
+            "Muscle Stiffness" : 5e5,
+            "Youngs Modulus" : 2e5,
+            "Poisson Ratio" : 0.4,
+            "Material Identifier" : 0
+        }
+    ]
+}

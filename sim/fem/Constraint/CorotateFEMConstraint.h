@@ -29,7 +29,7 @@ public:
 	int GetDof() override;
 	ConstraintType GetType() override;
 
-private:
+// private:
 	void	ComputeF(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& x);
 	void	ComputeP(Eigen::Matrix<TinyScalar, 3, 3>& P);
 	void	ComputedPdF(Tensor3333& dPdF);
@@ -40,7 +40,8 @@ private:
 	void 	EvaluateDVector(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& x);
 	void 	GetDVector(int& index,Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& d);
 
-protected:
+	void	fixIndex(int offset);
+// protected:
 	int 				mi0,mi1,mi2,mi3;
 	TinyScalar 				mVol;
 	TinyScalar 				mMu,mLambda;
@@ -74,7 +75,13 @@ CorotateFEMConstraint(const TinyScalar& stiffness,const TinyScalar& poisson_rati
 	mU.setZero();	
 	mV.setZero();
 }
-
+template <typename TinyScalar, typename TinyConstants> 
+void CorotateFEMConstraint<TinyScalar, TinyConstants>::fixIndex(int offset) {
+  mi0 += offset;
+  mi1 += offset;
+  mi2 += offset;
+  mi3 += offset;
+}
 template <typename TinyScalar, typename TinyConstants> 
 void CorotateFEMConstraint<TinyScalar, TinyConstants>::
 ComputeF

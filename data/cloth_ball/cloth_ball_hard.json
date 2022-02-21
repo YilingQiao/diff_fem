@@ -1,0 +1,54 @@
+{
+    "Parameters" : [
+        {
+            "Frame number" : 350,
+            "LocalGlobal" : 20,
+            "Signal": 1,
+            "Simulation HZ" : 100,
+            "Type" : "friction",
+            "Steps per frame" : 7,
+            "Self-collision" : false,
+            "Self-collision tolerance" : 5.0e-2,
+            "GravityY" : -9.8,
+            "Is underwater": 0,
+            "Air damping" : 0.0e-5
+        }
+    ], 
+    "Friction coefficients" : [
+        [ 0.1 ]
+    ],
+    "Clothes" : [
+        {
+            "Friction coefficients" : [
+                [ 0.1 ]
+            ],
+            "Obj filename" : "cloth_ball/cloth.obj",
+            "Area Density" : 3.0,
+            "Bending" : 5e-4,
+            "Stretching" : 2e2,
+            "Attach Stiffness": 1e5,
+            "Attach Verts": [9, 0, 99, 90],
+            "Material Identifier" : 0
+        }
+        
+    ],
+    "Meshes" : [
+        {
+            "Friction coefficients" : [
+                [ 0.1 ]
+            ],
+            "Enable Gravity": 1,
+            "Scale": 1,
+            "Actuator type": 0,
+            "Obj filename" : "droneman/ball_tet.obj",
+            "Center Index": 63,
+            "End Effector Index": 330,
+            "Local Contour Index": [63, 68, 85],
+            "Type": "Soft Articulated",
+            "Muscle Stiffness" : 5e5,
+            "Youngs Modulus" : 2e8,
+            "Poisson Ratio" : 0.4,
+            "Material Identifier" : 0
+        }
+    ]
+}

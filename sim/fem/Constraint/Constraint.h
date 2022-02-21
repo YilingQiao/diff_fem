@@ -29,6 +29,7 @@ public:
 	virtual void 	EvaluateDVector(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& x) = 0;
 	virtual void 	GetDVector(int& index,Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& d) = 0;
 	
+	virtual void	fixIndex(int offset) = 0;
 // protected:
 	TinyScalar mStiffness;
 

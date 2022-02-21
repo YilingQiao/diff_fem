@@ -16,7 +16,8 @@ SimulationWindow()
 
 	initLights();
 
-	mEnvironment = new Environment<double, DoubleUtils>();
+	mEnvironment = new Environment<double, DoubleUtils>(100,"/data/droneman/movedroneman.json");
+	// mEnvironment = new Environment<double, DoubleUtils>(100,"/data/jsonfiles/octopus.json",true,50);
 
 	// mActions.resize(mEnvironment->GetActions().size());
 	// mActions.setZero();
@@ -43,18 +44,19 @@ SimulationWindow::
 SimulationWindow(std::string network_name)
 	:SimulationWindow()
 {
-	try {
-		// mIsNNLoaded = true;
+	assert(false);
+	// try {
+	// 	mIsNNLoaded = true;
 
-		// p::object load = env_module.attr("loadNN");
-		// load(network_name);
-		// mEnvironment->Reset();
-		// mEnvironment->UpdateRandomTargetVelocity();
-	} 
-	catch (const p::error_already_set&)
-	{
-		PyErr_Print();
-	}
+	// 	p::object load = env_module.attr("loadNN");
+	// 	load(network_name);
+	// 	mEnvironment->Reset();
+	// 	mEnvironment->UpdateRandomTargetVelocity();
+	// } 
+	// catch (const p::error_already_set&)
+	// {
+	// 	PyErr_Print();
+	// }
 }
 Eigen::VectorXd
 SimulationWindow::
@@ -144,29 +146,51 @@ Display()
 
 	const Eigen::VectorXd& x = mEnvironment->GetSoftWorld()->GetPositions();
 	const Eigen::Vector3d& eye = mCamera->GetEye();
-	mEnvironment->GetDfobj()->SetVertexNormal();
+	// mEnvironment->GetDfobj()->SetVertexNormal();
+
+
+	auto mdfobjs = mEnvironment->GetDfobjs();
+	auto mdfobss = mEnvironment->GetDfobss();
+	for (auto mdfobj : mdfobjs)
+		mdfobj->SetVertexNormal();
+	for (auto mdfobs : mdfobss)
+		mdfobs->SetVertexNormal();
 	mEnvironment->GetSoftWorld()->mCollisionMesh->SetVertexNormal();
-	const std::vector<Muscle<double, DoubleUtils>*>& muscles = mEnvironment->GetDfobj()->GetMuscles();
+
+
+	// const std::vector<Muscle<double, DoubleUtils>*>& muscles = mEnvironment->GetDfobj()->GetMuscles();
 
 	GUI::DrawWorld();
+
+	int offset = 0;
+	for (auto mdfobj : mdfobjs) {
+		GUI::DrawCharacter(mdfobj,x.segment(offset, mdfobj->mNumUnknown),eye);
+		offset += mdfobj->mNumUnknown;
+	}
+	for (auto mdfobs : mdfobss) {
+		GUI::DrawObs(mdfobs,eye);
+	}
+	// std::cout << "here4" << std::endl;
+	// GUI::DrawCollisionMesh(mEnvironment->GetSoftWorld(),eye);
+	
 	// GUI::DrawMuscles(muscles,x);
-	GUI::DrawCharacter(mEnvironment->GetDfobj(),x,eye);
+	// GUI::DrawCharacter(mEnvironment->GetDfobj(),x,eye);
 	// GUI::DrawCollisionMesh(mEnvironment->GetSoftWorld(),eye);
 
-	Eigen::Vector3d center_position = 
-		x.block<3,1>(3*mEnvironment->GetDfobj()->GetCenterIndex(),0);
-	Eigen::Vector3d forward_vector = mEnvironment->GetDfobj()->GetForwardVector(x);
-	Eigen::Vector3d target_velocity = mEnvironment->GetTargetVelocity();
-	Eigen::Vector3d average_velocity = mEnvironment->GetAverageVelocity();
+	// Eigen::Vector3d center_position = 
+	// 	x.block<3,1>(3*mEnvironment->GetDfobj()->GetCenterIndex(),0);
+	// Eigen::Vector3d forward_vector = mEnvironment->GetDfobj()->GetForwardVector(x);
+	// Eigen::Vector3d target_velocity = mEnvironment->GetTargetVelocity();
+	// Eigen::Vector3d average_velocity = mEnvironment->GetAverageVelocity();
 
 	// GUI::DrawArrow3D(center_position,average_velocity,0.01,Eigen::Vector3d(255.0/256,56.0/256,109.0/256));
 	// GUI::DrawArrow3D(center_position,target_velocity,0.01,Eigen::Vector3d(12.0/256.0,239.0/256.0,103.0/256.0));
 
-	double init_x = 0.78;
-	double init_y = 1.0;
+	// double init_x = 0.78;
+	// double init_y = 1.0;
 
-	double length = 0.2;
-	double height = 0.08;
+	// double length = 0.2;
+	// double height = 0.08;
 
 	// for(int i=0; i<8; i++) 
 	// {
@@ -197,27 +221,32 @@ Keyboard(unsigned char key,int x,int y)
 			break;
 		}
 		case 's': {
-					mEnvironment->Step();	
-	glutPostRedisplay();
+			mEnvironment->Step();
+			glutPostRedisplay();
 			break;
 		}
 		case 'k': {
 			mPlay = true;
-			const auto& muscles = mEnvironment->GetDfobj()->GetMuscles();
-			mActions.resize(mEnvironment->GetActions().size());
-			mActions.setZero();
+			auto mdfobjs = mEnvironment->GetDfobjs();
+			for (auto mdfobj : mdfobjs) {
+				const auto& muscles = mdfobj->GetMuscles();
+				mActions = mdfobj->GetActions();
+				// mActions.resize(mEnvironment->GetActions().size());
+				mActions.setZero();
 
-			int cnt = 0;
-			for(const auto& m : muscles)
-			{
-				mActions[cnt+0]=0.0;
-				mActions[cnt+1]=0.7;
-				mActions[cnt+2]=0.3;
-				mActions[cnt+3]=5.0;
-				cnt+=4;
+				int cnt = 0;
+				for(auto m : muscles)
+				{
+					mActions[cnt+0]=0.0;
+					mActions[cnt+1]=0.7;
+					mActions[cnt+2]=0.3;
+					mActions[cnt+3]=5.0;
+					cnt+=4;
+				}
+
+				mActions = mdfobj->mNormalizer->RealToNorm(mActions);
+				mdfobj->SetActions(mActions);
 			}
-
-			mActions = mEnvironment->GetNormalizer()->RealToNorm(mActions);
 			break;
 		}
 	}
@@ -278,32 +307,32 @@ void
 SimulationWindow::
 Timer(int value)
 {
-	int ratio = mEnvironment->GetSimulationHz()/mEnvironment->GetControlHz();
+	int ratio = mEnvironment->GetSimulationHz()/30;
 
 	if(mPlay)
 	{
 		if(mIsNNLoaded) {
-			int cur_phase = mEnvironment->GetPhase();
-			Eigen::VectorXd action = GetActionFromNN(mEnvironment->GetStates());
-			mEnvironment->SetActions(action);
-			for(int i=0; i<ratio; i++) {
-				// if(mEnvironment->isCollision()) {
-				// 	mEnvironment->Step(mEnvironment->GetObstacles());	
-				// } else {
-					mEnvironment->Step();	
-				// }
-			}
-			mEnvironment->GetRewards();
-			mEnvironment->SetPhase(cur_phase+1);
-			mEnvironment->isEndOfEpisode();
+			assert(false);
+			// int cur_phase = mEnvironment->GetPhase();
+			// Eigen::VectorXd action = GetActionFromNN(mEnvironment->GetStates());
+			// mEnvironment->SetActions(action);
+			// for(int i=0; i<ratio; i++) {
+			// 	// if(mEnvironment->isCollision()) {
+			// 	// 	mEnvironment->Step(mEnvironment->GetObstacles());	
+			// 	// } else {
+			// 		mEnvironment->Step();	
+			// 	// }
+			// }
+			// mEnvironment->GetRewards();
+			// mEnvironment->SetPhase(cur_phase+1);
+			// mEnvironment->isEndOfEpisode();
 		} else {
-			int cur_phase = mEnvironment->GetPhase();
 			// mEnvironment->SetActions(mActions);
 			for(int i=0; i<ratio; i++) {
 				mEnvironment->Step();
 			}
 
-			mEnvironment->SetPhase(cur_phase+1);
+			mEnvironment->IncPhase();
 		}
 	}
 	glutTimerFunc(mDisplayTimeout, TimerEvent,1);

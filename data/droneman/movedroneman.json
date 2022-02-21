@@ -1,0 +1,63 @@
+{
+    "Parameters" : [
+        {
+            "Simulation HZ" : 100,
+            "Handle collision" : true,
+            "Self-collision" : true,
+            "Self-collision tolerance" : 5.0e-2,
+            "Gravity" : [0.0, 9.8, 0],
+            "Is underwater": 0,
+            "World Alpha": 1,
+            "World Friction": 1000,
+            "Max Iteration": 100
+        }
+    ],
+    
+    "Meshes" : [
+        {
+    
+            "Friction coefficients" : [
+                [ 0.1 ]
+            ],
+            "Enable Gravity": 0,
+            "Scale": 1,
+            "Is Mass Same": false,
+            "Mass": 10,
+            "Actuator type": 3,
+            "Obj filename" : "droneman/droneman600_tet.obj",
+            "Center Index": 63,
+            "End Effector Index": 330,
+            "Local Contour Index": [63, 68, 85],
+            "Type": "Soft Articulated",
+            "Muscle Stiffness" : 1e5,
+            "Youngs Modulus" : 2e5,
+            "Poisson Ratio" : 0.4,
+            "Material Identifier" : 0,
+            "Volume Verts": [
+                [494, 497, 498, 600, 601, 604, 605],[635,633,631,629,515,513,511],
+                [278, 275, 272, 269, 141, 138, 135],[282,281,280,279,145,144,143],
+                [215, 213, 211, 209, 29, 27, 25],[216,214,212,210,30,28,26],
+                [567, 566, 565, 564, 423, 422, 421],[527,526,521,520,395,394,389]]
+        },
+        {
+
+            "Friction coefficients" : [
+                [ 0.1 ]
+            ],
+            "Is Mass Same": false,
+            "Mass": 1,
+            "Enable Gravity": 1,
+            "Scale": 1,
+            "Actuator type": 0,
+            "Obj filename" : "droneman/ball_tet.obj",
+            "Center Index": 63,
+            "End Effector Index": 330,
+            "Local Contour Index": [63, 68, 85],
+            "Type": "Soft Articulated",
+            "Muscle Stiffness" : 5e5,
+            "Youngs Modulus" : 2e5,
+            "Poisson Ratio" : 0.4,
+            "Material Identifier" : 0
+        }
+    ]
+}

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef TINY_HELPER_H
 #define TINY_HELPER_H
 
@@ -47,6 +63,38 @@ to_eigen_double2tiny(
   std::vector<Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>> result(m.size());
   for (int v = 0; v < result.size(); v++) {
     result[v] = Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>();
+    for (int i = 0; i < m[v].rows(); ++i) {
+      for (int j = 0; j < m[v].cols(); ++j) {
+        result[v](i, j) = TinyConstants::scalar_from_double(m[v](i, j));
+      }
+    }
+  }
+  return result;
+}
+
+template <typename TinyScalar, typename TinyConstants>
+static  std::vector<Eigen::Matrix<TinyScalar, 3, 1> >
+to_eigen_double2tiny(
+    const std::vector<Eigen::Matrix<double, 3, 1> >& m) {
+  std::vector<Eigen::Matrix<TinyScalar, 3, 1>> result(m.size());
+  for (int v = 0; v < result.size(); v++) {
+    result[v] = Eigen::Matrix<TinyScalar, 3, 1>();
+    for (int i = 0; i < m[v].rows(); ++i) {
+      for (int j = 0; j < m[v].cols(); ++j) {
+        result[v](i, j) = TinyConstants::scalar_from_double(m[v](i, j));
+      }
+    }
+  }
+  return result;
+}
+
+template <typename TinyScalar, typename TinyConstants>
+static  std::vector<Eigen::Matrix<TinyScalar, 2, 1> >
+to_eigen_double2tiny(
+    const std::vector<Eigen::Matrix<double, 2, 1> >& m) {
+  std::vector<Eigen::Matrix<TinyScalar, 2, 1>> result(m.size());
+  for (int v = 0; v < result.size(); v++) {
+    result[v] = Eigen::Matrix<TinyScalar, 2, 1>();
     for (int i = 0; i < m[v].rows(); ++i) {
       for (int j = 0; j < m[v].cols(); ++j) {
         result[v](i, j) = TinyConstants::scalar_from_double(m[v](i, j));

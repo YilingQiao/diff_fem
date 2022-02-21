@@ -1,0 +1,33 @@
+{
+    "Parameters" : [
+        {
+            "Simulation HZ" : 200,
+            "Handle collision" : true,
+            "Self-collision" : false,
+            "Self-collision tolerance" : 5.0e-2,
+            "Gravity" : [0.0, -100, 0],
+            "Is underwater": 0
+        }
+    ],
+    
+    "Friction coefficients" : [
+        [ 0.1 ]
+    ],
+    
+    "Meshes" : [
+        {
+            "Obj filename" : "bridgesus/bridgesus200_tet_cen.obj",
+            "Center Index": 63,
+            "End Effector Index": 330,
+            "Local Contour Index": [63, 68, 85],
+            "Type": "Soft Articulated",
+            "Muscle Stiffness" : 5e5,
+            "Youngs Modulus" : 2e5,
+            "Poisson Ratio" : 0.4,
+            "Material Identifier" : 0,
+            "Attach Verts": [1, 3, 5, 6, 7, 22, 23, 24, 25, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 85, 86, 111, 112, 113, 114, 115, 116, 118, 119, 120, 121, 127, 129, 130, 161, 162, 163, 164, 165, 166, 167, 169, 170, 171, 172, 173, 176, 177, 195, 196, 197, 198, 199, 200, 201, 205],
+            "Scale": 0.05,
+            "Attach Stiffness": 1e20
+        }
+    ]
+}

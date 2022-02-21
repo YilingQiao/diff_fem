@@ -8,13 +8,14 @@ add_compile_options(-std=gnu++11)
 add_compile_options(-Wdeprecated-declarations)
 
 add_definitions(-DSOFTCON_DIR="${CMAKE_HOME_DIRECTORY}")
+add_definitions(-DNDEBUG)
 set(CMAKE_MODULE_PATH "${CMAKE_HOME_DIRECTORY}/cmake_module")
 
 
 # CGAL
-# set(CGAL_DONT_OVERRIDE_CMAKE_FLAGS true)
-# find_package(CGAL COMPONENTS Core)
-# include(${CGAL_USE_FILE})
+set(CGAL_DONT_OVERRIDE_CMAKE_FLAGS true)
+find_package(CGAL COMPONENTS Core)
+include(${CGAL_USE_FILE})
 
 
 # Tiny Obj Loader
@@ -33,13 +34,11 @@ endif()
 if (NOT RAPIDJSON_INCLUDEDIR)
   set(RAPIDJSON_INCLUDEDIR "${CMAKE_CURRENT_SOURCE_DIR}/extern/rapidjson/include")
 endif()
-find_package(rapidjson REQUIRED)
 include_directories("${RAPIDJSON_INCLUDE_DIRS}")
+find_package(rapidjson REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RAPIDJSON_CXX_FLAGS}")
 
-
 message("Flags : " ${CMAKE_CXX_FLAGS})
-
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING
@@ -52,19 +51,17 @@ link_directories(sim/)
 include_directories(sim/)
 link_directories(sim/fem/)
 include_directories(sim/fem/)
-include_directories(render/)
-link_directories(render/)
+# include_directories(render/)
+# link_directories(render/)
 
 add_subdirectory( sim )
-add_subdirectory( render )
-add_subdirectory( learn )
+# add_subdirectory( render )
+# add_subdirectory( learn )
 
 
 add_subdirectory(extern/pybind11)
 pybind11_add_module(pydifem python/pydifem.cc ${srcs})
 
 target_compile_definitions(pydifem PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INFO})
-#add_library(render SHARED ${srcs})
-message("boost : " ${Boost_LIBRARIES})
 target_link_libraries(pydifem ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${Boost_LIBRARIES} 
     ${PYTHON_LIBRARIES} sim  )

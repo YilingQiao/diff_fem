@@ -7,6 +7,7 @@
 #include "LinearMuscleConstraint.h"
 #include "SpringConstraint.h"
 #include "BendingConstraint.h"
+#include "pneumaticEasy.h"
 // #include "TriangleBendingConstraint.h"
 // #include "TriangleMuscleConstraint.h"
 // #include "TriangleStrainConstraint.h"

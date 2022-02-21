@@ -169,10 +169,10 @@ Initialize(FEM::Mesh<TinyScalar, TinyConstants>* mesh,TinyScalar muscle_stiffnes
 			TinyScalar weight = TinyConstants::exp1(-TinyConstants::abs1(dist)/0.005);
 	
 			if(isInTetra(p0,p1,p2,p3,start,end)) {
-				segment->AddMuscleConstraint(new FEM::LinearMuscleConstraint<TinyScalar, TinyConstants>(5E5,fiber_direction,0.0,i0,i1,i2,i3,1.0/6.0*Dm.determinant(),Dm.inverse(),weight));
+				segment->AddMuscleConstraint(new FEM::LinearMuscleConstraint<TinyScalar, TinyConstants>(muscle_stiffness,fiber_direction,0.0,i0,i1,i2,i3,1.0/6.0*Dm.determinant(),Dm.inverse(),weight));
 			}
 			else if(weight>0.2) {
-				segment->AddMuscleConstraint(new FEM::LinearMuscleConstraint<TinyScalar, TinyConstants>(5E5,fiber_direction,0.0,i0,i1,i2,i3,1.0/6.0*Dm.determinant(),Dm.inverse(),weight));
+				segment->AddMuscleConstraint(new FEM::LinearMuscleConstraint<TinyScalar, TinyConstants>(muscle_stiffness,fiber_direction,0.0,i0,i1,i2,i3,1.0/6.0*Dm.determinant(),Dm.inverse(),weight));
 			}
 
 			TinyScalar D = Dm.determinant();
@@ -193,14 +193,14 @@ Initialize(FEM::Mesh<TinyScalar, TinyConstants>* mesh,TinyScalar muscle_stiffnes
 			{
 				start_idx = j;
 				segment->SetStart(Eigen::Vector4i(i0,i1,i2,i3),Eigen::Matrix<TinyScalar, 4, 1>(S0,S1,S2,S3));
-				segment->AddMuscleConstraint(new FEM::LinearMuscleConstraint<TinyScalar, TinyConstants>(5E5,fiber_direction,0.0,i0,i1,i2,i3,1.0/6.0*Dm.determinant(),Dm.inverse(),weight));
+				segment->AddMuscleConstraint(new FEM::LinearMuscleConstraint<TinyScalar, TinyConstants>(muscle_stiffness,fiber_direction,0.0,i0,i1,i2,i3,1.0/6.0*Dm.determinant(),Dm.inverse(),weight));
 			}
 
 			if( TinyConstants::abs1(E0+E1+E2+E3-1.0)<1E-4)
 			{
 				end_idx = j;
 				segment->SetEnd(Eigen::Vector4i(i0,i1,i2,i3),Eigen::Matrix<TinyScalar, 4, 1>(E0,E1,E2,E3));
-				segment->AddMuscleConstraint(new FEM::LinearMuscleConstraint<TinyScalar, TinyConstants>(5E5,fiber_direction,0.0,i0,i1,i2,i3,1.0/6.0*Dm.determinant(),Dm.inverse(),weight));
+				segment->AddMuscleConstraint(new FEM::LinearMuscleConstraint<TinyScalar, TinyConstants>(muscle_stiffness,fiber_direction,0.0,i0,i1,i2,i3,1.0/6.0*Dm.determinant(),Dm.inverse(),weight));
 			}
 		}
 		if(segment->GetStartBarycentric().norm()<1E-6)

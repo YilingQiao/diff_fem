@@ -22,6 +22,7 @@ public:
 	void	EvaluateLMatrix(std::vector<Eigen::Triplet<TinyScalar>>& L_triplets);
 	void 	EvaluateDVector(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& x);
 	void 	GetDVector(int& index,Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& d);
+	void	fixIndex(int offset);
 
 	int&			 GetI0() {return mi0;}
 	Eigen::Matrix<TinyScalar, 3, 1>& GetP()  {return mp;}
@@ -57,6 +58,11 @@ ConstraintType AttachmentConstraint<TinyScalar, TinyConstants>::
 GetType()	   
 {
 	return ConstraintType::ATTACHMENT; 
+}
+
+template <typename TinyScalar, typename TinyConstants> 
+void AttachmentConstraint<TinyScalar, TinyConstants>::fixIndex(int offset) {
+  mi0 += offset;
 }
 
 template <typename TinyScalar, typename TinyConstants> 

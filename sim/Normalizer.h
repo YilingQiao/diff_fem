@@ -28,6 +28,11 @@ private:
 	Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1> mNormValDiffInv;
 };
 
+
+
+
+
+
 #include <iostream>
 template <typename TinyScalar, typename TinyConstants> 
 Normalizer<TinyScalar, TinyConstants>::

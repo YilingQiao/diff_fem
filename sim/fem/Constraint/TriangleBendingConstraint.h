@@ -24,6 +24,7 @@ public:
 	void EvaluateDVector(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& x);
 	void GetDVector(int& index,Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& d);
 
+	void	fixIndex(int offset);
 	int GetI0() {return mi0;}
 	int GetI1() {return mi1;}
 	int GetI2() {return mi2;}
@@ -38,6 +39,13 @@ protected:
 
 
 
+template <typename TinyScalar, typename TinyConstants> 
+void TriangleBendingConstraint<TinyScalar, TinyConstants>::fixIndex(int offset) {
+  mi0 += offset;
+  mi1 += offset;
+  mi2 += offset;
+  mi3 += offset;
+}
 
 
 template <typename TinyScalar, typename TinyConstants> 

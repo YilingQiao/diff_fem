@@ -37,6 +37,5 @@ include_directories(${GLUT_INCLUDE_DIR})
 file(GLOB srcs "*.h" "*.cpp")
 
 add_executable(render ${srcs})
-message("boost1 : " ${Boost_LIBRARIES})
 target_link_libraries(render ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${Boost_LIBRARIES} 
 	${PYTHON_LIBRARIES} sim /usr/lib/x86_64-linux-gnu/libtinyxml.a )

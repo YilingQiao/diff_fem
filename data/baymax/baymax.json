@@ -1,0 +1,42 @@
+{
+    "Parameters" : [
+        {
+            "Simulation HZ" : 100,
+            "Handle collision" : true,
+            "Self-collision" : false,
+            "Self-collision tolerance" : 5.0e-2,
+            "Gravity": [0, -9.8, 0],
+            "Is underwater": 0,
+            "Air damping" : 0.0e-5
+        }
+    ], 
+    "Friction coefficients" : [
+        [ 0.1 ]
+    ],
+    "Meshes" : [
+        {
+            "Friction coefficients" : [
+                [ 0.1 ]
+            ],
+            "Enable Gravity": 1,
+            "Scale": 1,
+            "Actuator type": 0,
+            "Obj filename" : "baymax/baymax500_tet.obj",
+            "Center Index": 63,
+            "End Effector Index": 330,
+            "Local Contour Index": [63, 68, 85],
+            "Type": "Soft Articulated",
+            "Muscle Stiffness" : 5e5,
+            "Youngs Modulus" : 8e2,
+            "Poisson Ratio" : 0.4,
+            "Material Identifier" : 0
+        }
+    ],
+    "Obstacles" : [
+        {
+            "Obj filename" : "baymax/cloth.obj",
+            "Scale": 1,
+            "Collision tolerance" : 1.5e-2
+        }
+    ]
+}

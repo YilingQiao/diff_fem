@@ -2,6 +2,7 @@
 #define __Dfskeleton_H__
 #include "fem/World.h"
 #include "fem/Mesh/MeshHeaders.h"
+#include "Normalizer.h"
 #include "Muscle.h"
 
 #include <rapidjson/document.h>
@@ -20,7 +21,7 @@ public:
     ~Dfobj();
 
     virtual void Initialize(FEM::World<TinyScalar, TinyConstants>* world);
-    virtual void SetDfobj(const std::string& path);
+    virtual void SetDfobj(const rapidjson::Value &object, Eigen::Matrix<TinyScalar, 3, 1> offset);
     void SetMesh(const std::string& path,const Eigen::Transform<TinyScalar, 3, 2>& T);
     void MakeMuscles(const std::string& path,const TinyScalar& gamma);
 
@@ -32,7 +33,7 @@ public:
 
     const std::vector<Eigen::Vector3i>& GetContours(){return mContours;};
 
-    void SetVertexNormal();
+    virtual void SetVertexNormal();
     const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& GetVertexNormal(){return mVertexNormal;};
 
     const std::vector<Muscle<TinyScalar, TinyConstants>*>& GetMuscles() {return mMuscles;};
@@ -46,6 +47,9 @@ public:
     const int& GetEndEffectorIndex() {return mEndEffectorIndex;};
     const std::vector<int>& GetSamplingIndex() {return mSamplingIndex;};  
     void OutputSurface(std::string filename, const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1> &x);
+    void InitializeActions();
+    const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& GetActions() {return mActions;};
+    void SetActions(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& actions);
 
     void SetActivationLevelsAggregate(Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& v);
     Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1> GetActivationLevelsAggregate();
@@ -54,7 +58,8 @@ public:
     TinyScalar                                  mYoungsModulus;
     TinyScalar                                  mPoissonRatio;
 
-    FEM::Mesh<TinyScalar, TinyConstants>*   mMesh;
+    FEM::World<TinyScalar, TinyConstants>*      mSoftWorld;
+    FEM::Mesh<TinyScalar, TinyConstants>*       mMesh;
     Eigen::Transform<TinyScalar, 3, 2>                         mScalingMatrix;
 
     std::vector<FEM::Constraint<TinyScalar, TinyConstants>*>            mConstraints;
@@ -64,7 +69,9 @@ public:
     std::vector<Eigen::Vector3i>            mContours;
 
     int                                     mCenterIndex;
+    int                                     mNumUnknown = 0;
     int                                     mEndEffectorIndex;
+    bool                                    mEnableGravity;
 
     std::vector<int>                        mSamplingIndex;
     Eigen::Vector3i                         mLocalContourIndex;
@@ -74,13 +81,11 @@ public:
     Eigen::Matrix<TinyScalar, 3, 3>                         mInitReferenceMatrix;
 
     bool                                    mIsVolumeAct;
-    int                                     mIsUnderwater, mIsSkeletonAct, mMassType;
-    TinyScalar                              mAttachY, mDragMult;
-    TinyScalar                              mGravityY = 0;
+    int                                     mIsSkeletonAct, mActuatorType;
     TinyScalar                              mAttachStiffness = 0.;
-    TinyScalar                              mTotalMass;
-    bool                                    mIsAttachY = false;
-    std::vector<FEM::CorotateFEMConstraintActuate<TinyScalar, TinyConstants>*> mVolumeMuscles;
+    bool                                    mIsAttach = false;
+    // std::vector<FEM::CorotateFEMConstraintActuate<TinyScalar, TinyConstants>*> mVolumeMuscles;
+    std::vector<FEM::PneumaticConstraint<TinyScalar, TinyConstants>*> mVolumeMuscles;
 
 
     std::vector<int>                    mContactIdx;
@@ -97,6 +102,17 @@ public:
     std::vector<std::vector<int>>           mRigidBodies;
     std::vector<Link<TinyScalar, TinyConstants>*>                      mlinks;
 
+    Normalizer<TinyScalar, TinyConstants>*                  mNormalizer;
+    Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>                 mNormLowerBound;
+    Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>                 mNormUpperBound;
+
+    // Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>                  mStates;
+    Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>                 mActions;
+
+    int                             mPhase;
+    std::set<int>                   mVolumeVertIdx, mAttachIdx;
+    TinyScalar                      mTotalMass = 10.0;
+    bool                            mIsMassSame = true;
 };
 
 
@@ -107,7 +123,10 @@ using namespace FEM;
 template <typename TinyScalar, typename TinyConstants> 
 Dfobj<TinyScalar, TinyConstants>::
 Dfobj(const TinyScalar& muscle_stiffness,const TinyScalar& youngs_modulus,const TinyScalar& poisson_ratio)
-    :mMesh(),mMuscleStiffness(muscle_stiffness),mYoungsModulus(youngs_modulus)
+    :mMesh()
+    ,mMuscleStiffness(muscle_stiffness)
+    ,mYoungsModulus(youngs_modulus)
+    ,mPhase(0)
     ,mPoissonRatio(poisson_ratio),mIsVolumeAct(true)
 {
     printf("construct Dfskeleton\n");
@@ -122,97 +141,72 @@ Dfobj<TinyScalar, TinyConstants>::
 
 template <typename TinyScalar, typename TinyConstants> 
 void Dfobj<TinyScalar, TinyConstants>::
-SetDfobj(const std::string& path)
+SetDfobj(const rapidjson::Value &object, Eigen::Matrix<TinyScalar, 3, 1> offset)
 {
-    std::cout <<"+ SetDfobj Data Path: " << path << std::endl;
-    std::FILE* file = std::fopen(path.c_str(), "r");
-    if (file == nullptr)
-        throw std::invalid_argument(std::string("Couldn't open file ") + path);
-    constexpr std::size_t buffer_size = 10240;
-    char buffer[buffer_size];
-
-    printf("loading scene\n");
-    rapidjson::FileReadStream is = rapidjson::FileReadStream(file, buffer, buffer_size);
-    rapidjson::Document scene_description;
-    scene_description.ParseStream(is);
-    fclose(file);
-    printf("finish scene\n");
-
-    if (!scene_description.IsObject())
-        throw std::invalid_argument("JSON reader - Error : root must be an object");
-
-
-    printf("loading Parameters\n");
-    const rapidjson::Value& para_array = scene_description["Parameters"];
-    const auto& para_object = para_array[0];
-
-    if (para_object.HasMember("Is underwater")) {
-        printf("loading Is underwater\n");
-        mIsUnderwater = para_object["Is underwater"].GetInt();
-    } else {
-        mIsUnderwater = 1;
-    }
-
-    if (para_object.HasMember("Is skeleton actuated")) {
+    if (object.HasMember("Is skeleton actuated")) {
         printf("loading Is skeleton actuated\n");
-        mIsSkeletonAct = para_object["Is skeleton actuated"].GetInt();
+        mIsSkeletonAct = object["Is skeleton actuated"].GetInt();
     } else {
         mIsSkeletonAct = 0;
     }
-    
-    if (!mIsUnderwater)
-        mGravityY = para_object["GravityY"].GetDouble();
 
+    // 0 no actuator
+    // 1 skeleton
+    // 2 muscle
+    // 3 pneumatic
+    if (object.HasMember("Actuator type")) {
+        printf("loading Actuator type\n");
+        mActuatorType = object["Actuator type"].GetInt();
+    } else {
+        mActuatorType = 0;
+    }
 
-
-    const rapidjson::Value& mesh_array = scene_description["Meshes"];
-    const auto& object = mesh_array[0];
-
+    assert(object.HasMember("Obj filename"));
+    printf("loading mesh\n");
+    double scale = 0.05;
+    if (object.HasMember("Scale"))
+        scale = object["Scale"].GetDouble();
+    std::cout << scale << " scale\n" ;
+    assert(scale > 0);
+    if (object.HasMember("Enable Gravity"))
+        mEnableGravity = object["Enable Gravity"].GetInt();
+    else
+        mEnableGravity = true;
     if (object.HasMember("Youngs Modulus"))
         mYoungsModulus = object["Youngs Modulus"].GetDouble();
     if (object.HasMember("Muscle Stiffness"))
         mMuscleStiffness = object["Muscle Stiffness"].GetDouble();
     if (object.HasMember("Poisson Ratio"))
         mPoissonRatio = object["Poisson Ratio"].GetDouble();
-    if (object.HasMember("Mass Type")) {
-        printf("loading mass type\n");
-        mMassType = object["Mass Type"].GetInt();
-    } else {
-        mMassType = 0;
-    }
-
-    if (object.HasMember("Mass")) {
-        printf("loading mass\n");
+    if (object.HasMember("Mass"))
         mTotalMass = object["Mass"].GetDouble();
-    } else {
-        mTotalMass = 10.;
-    }
+    if (object.HasMember("Is Mass Same"))
+        mIsMassSame = object["Is Mass Same"].GetBool();
 
-    if (object.HasMember("Drag")) {
-        printf("loading drag mult\n");
-        mDragMult = object["Drag"].GetDouble();
-    } else {
-        mDragMult = 1.;
-    }
+    
 
-    assert(object.HasMember("Obj filename"));
-    printf("loading mesh\n");
     std::string rest_state_file_name = object["Obj filename"].GetString();
     Eigen::Transform<TinyScalar, 3, 2> T=Eigen::Transform<TinyScalar, 3, 2>::Identity();
-    T(0,0) *= 0.05; T(1,1) *= 0.05; T(2,2) *= 0.05; 
+    T(0,0) *= scale; T(1,1) *= scale; T(2,2) *= scale; 
+    T.translation() = offset;
     SetMesh(rest_state_file_name,T);
+
+
 
     if (object.HasMember("Muscle filename")) {
         printf("loading muscle\n");
         std::string muscleFileName = object["Muscle filename"].GetString();
         MakeMuscles(std::string(SOFTCON_DIR)+"/data/"+muscleFileName,1.0);
+        std::cout << mMuscles.size() << " mMuscles\n";
     }
 
-    if (object.HasMember("Attach y")) {
+    if (object.HasMember("Attach Verts")) {
         printf("loading Attach y\n");
-        mIsAttachY = true;
-        mAttachY = object["Attach y"].GetDouble();
+        mIsAttach = true;
         mAttachStiffness = object["Attach Stiffness"].GetDouble();
+        const auto &verts = object["Attach Verts"];
+        for (int i = 0; i < verts.Size(); ++i)
+            mAttachIdx.insert(verts[i].GetInt());
     }
 
     if (object.HasMember("Sampling filename")) {
@@ -233,11 +227,33 @@ SetDfobj(const std::string& path)
         ifs.close();
     }
 
+    const auto& vertices = mMesh->GetVertices();
+    printf("----------- set pneumatic\n");
+    mVolumeVertIdx = std::set<int>();
+    const auto &volverts = object["Volume Verts"];
+    int num_volverts = volverts.Size();
+    for (int i = 0; i < num_volverts; ++i) {
+        const auto &lines = volverts[i];
+        int num_verts = lines.Size();
+        std::vector<int> tmp;
+        for (int j = 0; j < num_verts; ++j)
+            tmp.push_back(lines[j].GetInt());
+        for (int j = 0; j < num_verts-1; ++j) {
+            int i0 = tmp[j], i1 = tmp[j+1];
+            Eigen::Matrix<TinyScalar, 3, 1> p0 = vertices[i0], p1 = vertices[i1];
+            TinyScalar length = (p0 - p1).norm();
+
+            auto fem_constraint = new PneumaticConstraint<TinyScalar, TinyConstants>(i0, i1, length, mMuscleStiffness);
+            mVolumeMuscles.push_back(fem_constraint);
+            mConstraints.push_back(fem_constraint);
+        }
+        // mVolumeVertIdx.insert(volverts[i].GetInt());
+    }
+
 
     printf("----------- set rigid\n");
     //set rigids -------------------------------------------
     std::vector<std::vector<int>> rigidBodies;
-    if (object.HasMember("Bones")) 
     {
         const auto &bones = object["Bones"];
         int num_bones = bones.Size();
@@ -247,23 +263,27 @@ SetDfobj(const std::string& path)
             std::string jointType = bone["Joint Type"].GetString();
             auto jt = jointType=="ALL" ? Link<TinyScalar, TinyConstants>::ALL : 
                 (jointType=="ROTATIONAL" ? Link<TinyScalar, TinyConstants>::ROTATIONAL : 
-                    (jointType=="PRISMATIC" ? Link<TinyScalar, TinyConstants>::PRISMATIC : 
-                        Link<TinyScalar, TinyConstants>::ERR));
+                (jointType=="PRISMATIC" ? Link<TinyScalar, TinyConstants>::PRISMATIC : 
+                    Link<TinyScalar, TinyConstants>::ERR));
             Eigen::Matrix<TinyScalar, 3, 1> jointPos, jointAxis;
             for (int i = 0; i < 3; ++i)
                 jointPos[i] = bone["Joint Pos"][i].GetDouble();
+            if (pid >= 0)
+                jointPos += offset;
             for (int i = 0; i < 3; ++i)
                 jointAxis[i] = bone["Joint Axis"][i].GetDouble();
             jointAxis = jointAxis / jointAxis.norm();
-            std::vector<int> vertices;
+            std::vector<int> vertidx;
             const auto &verts = bone["Vertices"];
             for (int i = 0; i < verts.Size(); ++i)
-                vertices.push_back(verts[i].GetInt());
+                vertidx.push_back(verts[i].GetInt());
 
-            rigidBodies.push_back(vertices);
+            rigidBodies.push_back(vertidx);
             Link<TinyScalar, TinyConstants> *pa = pid < 0 ? NULL : mlinks[pid];
-            mlinks.push_back(new Link<TinyScalar, TinyConstants>(
-                pa, jointPos, jt, jointAxis, i));
+            mlinks.push_back(new Link<TinyScalar, TinyConstants>(pa, jointPos, jt, jointAxis, i));
+            Link<TinyScalar, TinyConstants> *cur = mlinks.back();
+            for (int ind : vertidx)
+                cur->restpos.push_back(vertices[ind]);
         }
     }
     //set rigids -------------------------------------------
@@ -278,7 +298,6 @@ SetDfobj(const std::string& path)
         }
     std::vector<int> mrigid_ori = mrigid;
     std::sort(mrigid_ori.begin(), mrigid_ori.end());
-    const auto& vertices = mMesh->GetVertices();
     for (int i = 0, j = 0; i < 3*vertices.size(); ++i) {
         if (j == mrigid_ori.size() || i < mrigid_ori[j])
             mnonrigid.push_back(i);
@@ -286,6 +305,7 @@ SetDfobj(const std::string& path)
             ++j;
     }
 
+    mNumUnknown = 3*vertices.size();
 
     mCenterIndex = object["Center Index"].GetInt();
     mEndEffectorIndex = object["End Effector Index"].GetInt();
@@ -293,6 +313,75 @@ SetDfobj(const std::string& path)
         mLocalContourIndex[i] = object["Local Contour Index"][i].GetInt();
 }
 
+template <typename TinyScalar, typename TinyConstants> 
+void Dfobj<TinyScalar, TinyConstants>::
+SetActions(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& actions)
+{
+    if (mActuatorType == 1) { // skeleton
+        mSoftWorld->mJointTorque = actions;
+        // std::cout <<"??? actions "<<actions[0]<<" "<<actions[1]<<" "<<actions[2]<<" "<<actions[3]<<std::endl;
+    } else if (mActuatorType == 2) { // muscle
+        Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1> real_actions = mNormalizer->NormToReal(actions);
+        SetActivationLevels(real_actions, mPhase);
+    } else if (mActuatorType == 3) { // pneumatic
+        for (int i = 0; i < mVolumeMuscles.size(); i++) {
+            mVolumeMuscles[i]->SetActivationLevel(actions[i]);
+        }
+    }
+}
+
+template <typename TinyScalar, typename TinyConstants> 
+void Dfobj<TinyScalar, TinyConstants>::
+InitializeActions()
+{
+    // 0 no actuator
+    // 1 skeleton
+    // 2 muscle
+    // 3 pneumatic
+    int num_action;
+    if (mActuatorType == 0) {
+        printf("no actuator\n");
+    } else if (mActuatorType == 1) {
+        printf("skeleton actuator\n");
+        num_action = mRigidBodies.size() - 1;
+        mActions.resize(num_action);
+        std::cout << "num_action " << num_action << "\n";
+    } else if (mActuatorType == 2) {
+        printf("muscle actuator\n");
+        const auto& muscles = GetMuscles();
+        num_action = 4 * muscles.size();
+        mActions.resize(num_action);
+
+        Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1> real_lower_bound(num_action);
+        Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1> real_upper_bound(num_action);
+
+        std::cout << num_action << " num_action\n";
+        std::cout << muscles.size() << " muscles\n";
+        int cnt = 0;
+        for(const auto& m : muscles) 
+        {
+            real_lower_bound.segment(cnt,4) = m->GetActionLowerBound();
+            real_upper_bound.segment(cnt,4) = m->GetActionUpperBound();
+            cnt += 4;
+        }
+
+        mNormLowerBound.resize(real_lower_bound.size());
+        mNormUpperBound.resize(real_upper_bound.size());
+
+        mNormLowerBound.setOnes();
+        mNormLowerBound *= -5.0;
+        mNormUpperBound.setOnes();
+        mNormUpperBound *= 5.0;
+
+        mNormalizer = new Normalizer<TinyScalar, TinyConstants>(real_upper_bound,real_lower_bound,
+            mNormUpperBound,mNormLowerBound);
+    } else if (mActuatorType == 3) {
+        num_action = mVolumeMuscles.size();
+        mActions.resize(num_action);
+        printf("pneumatic actuator\n");
+    }
+
+}
 
 template <typename TinyScalar, typename TinyConstants> 
 Eigen::Matrix<TinyScalar, 3, 3> Dfobj<TinyScalar, TinyConstants>::
@@ -329,7 +418,7 @@ template <typename TinyScalar, typename TinyConstants>
 void Dfobj<TinyScalar, TinyConstants>::
 SetInitReferenceRotation(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& x)
 {
-    mInitReferenceMatrix=GetReferenceRotation(GLOBAL,x);
+    mInitReferenceMatrix = GetReferenceRotation(GLOBAL,x);
 }
 
 template <typename TinyScalar, typename TinyConstants> 
@@ -362,6 +451,7 @@ Initialize(FEM::World<TinyScalar, TinyConstants>* world)
 
     m_masses.resize(vertices.size());
     TinyScalar totvol = 0;
+
     for(const auto& tet : tetrahedras)
     {
         int i0,i1,i2,i3;
@@ -395,29 +485,31 @@ Initialize(FEM::World<TinyScalar, TinyConstants>* world)
             Dm.template block<3,1>(0,1) = p2 - p0;
             Dm.template block<3,1>(0,2) = p3 - p0;
         }
-        // TinyScalar eps = 1e-0;
-        // Eigen::JacobiSVD<Eigen::Matrix<TinyScalar, 3, 3>> svd(Dm, Eigen::ComputeFullU | Eigen::ComputeFullV);
-        // Eigen::Matrix<TinyScalar, 3, 1> D = svd.singularValues();
-        // D[0] += eps; D[1] += eps; D[2] += eps;
-        // Dm = svd.matrixU() * D.asDiagonal() * svd.matrixV().transpose();
-        bool is_actuate =  false;
+        bool is_actuate = false;
+        // is_actuate = is_actuate || (mVolumeVertIdx.find(i0) != mVolumeVertIdx.end());
+        // is_actuate = is_actuate || (mVolumeVertIdx.find(i1) != mVolumeVertIdx.end());
+        // is_actuate = is_actuate || (mVolumeVertIdx.find(i2) != mVolumeVertIdx.end());
+        // is_actuate = is_actuate || (mVolumeVertIdx.find(i3) != mVolumeVertIdx.end());
         // bool is_actuate =  mIsVolumeAct & p0[1] < -0.1;
         if (is_actuate) {
-            // exit(0);
-            auto fem_constraint = new CorotateFEMConstraintActuate<TinyScalar, TinyConstants>(mYoungsModulus,mPoissonRatio,i0,i1,i2,i3,
-                1.0/6.0*(Dm.determinant()),Dm.inverse());
-            mVolumeMuscles.push_back(fem_constraint);
-            mConstraints.push_back(fem_constraint);
+            // auto fem_constraint = new CorotateFEMConstraintActuate<TinyScalar, TinyConstants>(mYoungsModulus,mPoissonRatio,i0,i1,i2,i3,
+            //     1.0/6.0*(Dm.determinant()),Dm.inverse());
+            // mVolumeMuscles.push_back(fem_constraint);
+            // mConstraints.push_back(fem_constraint);
         }
         else {
             auto fem_constraint = new CorotateFEMConstraint<TinyScalar, TinyConstants>(mYoungsModulus,mPoissonRatio,i0,i1,i2,i3,
                 1.0/6.0*(Dm.determinant()),Dm.inverse());
             mConstraints.push_back(fem_constraint);
         }
-        TinyScalar vol = 1.0/6.0*(Dm.determinant());
-        totvol += vol;
-        for (int i = 0; i < 4; ++i)
-            m_masses[tet[i]] += 0.25 * vol;
+
+        if (mIsMassSame) {
+            TinyScalar vol = 1.0 / 6.0 * (Dm.determinant());
+            totvol += vol;
+            for (int i = 0; i < 4; ++i) {
+                m_masses[tet[i]] += 0.25 * vol;
+            }
+        }
 
         int sorted_idx[4] ={i0,i1,i2,i3};
         std::sort(sorted_idx,sorted_idx+4);
@@ -426,18 +518,20 @@ Initialize(FEM::World<TinyScalar, TinyConstants>* world)
         triangles.push_back(Eigen::Vector3i(sorted_idx[0],sorted_idx[2],sorted_idx[3]));
         triangles.push_back(Eigen::Vector3i(sorted_idx[1],sorted_idx[2],sorted_idx[3]));
     }
-    if (mMassType == 0)
+
+    if (mIsMassSame) {
+        for (std::size_t vId = 0; vId < m_masses.size(); ++vId)
+            m_masses[vId] = mTotalMass / totvol * m_masses[vId];
+    }
+    else {
         for (std::size_t vId = 0; vId < m_masses.size(); ++vId)
             m_masses[vId] = mTotalMass / m_masses.size();
-    else
-        for (std::size_t vId = 0; vId < m_masses.size(); ++vId)
-            m_masses[vId] = mTotalMass/totvol * m_masses[vId];
+    }
 
-    if (mIsAttachY) {
+
+    if (mIsAttach) {
         for (int i = 0; i < vertices.size(); i++) {
-            if (vertices[i][1] < mAttachY &&
-                std::abs(TinyConstants::getDouble(vertices[i][0]) )>0.27) {
-                printf("attach!!!!!!!!!!!!!! %d\n", i);
+            if (mAttachIdx.find(i) != mAttachIdx.end()) {
                 auto attach_constraint = new AttachmentConstraint<TinyScalar, TinyConstants>(
                     mAttachStiffness, i, vertices[i]);
                 mConstraints.push_back(attach_constraint);
@@ -507,15 +601,13 @@ Initialize(FEM::World<TinyScalar, TinyConstants>* world)
         v.template block<3,1>(i*3,0) = vertices[i];
 
 
-    // world->AddBody(v,mConstraints,m_masses,mContactIdx,mContactFace);
-
     world->AddBody(v,mConstraints,m_masses,mContactIdx,mContactFace, 
     	mRigidBodies, mnonrigid, mrigid, mlinks);
-    printf("=========== 10\n");
     if (mMuscles.size() > 0) {
         SetKey("Dfobj.param");
     }
-    printf("=========== 11\n");
+
+    mSoftWorld = world;
 }
 
 template <typename TinyScalar, typename TinyConstants> 
@@ -579,11 +671,12 @@ template <typename TinyScalar, typename TinyConstants>
 void Dfobj<TinyScalar, TinyConstants>::
 SetActivationLevels(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& actions,const int& phase)
 {
-    int idx =0;
-    for(int i=0; i<mMuscles.size(); i++)
+    int idx = 0;
+    // std::cout << actions[0] << " " << actions[1] << " " << actions[2] << " " << actions[3] << "\n";
+    for(int i = 0; i < mMuscles.size(); i++)
     {
-        mMuscles[i]->SetActivationLevels(actions.segment(idx,4),phase);
-        idx+=4;
+        mMuscles[i]->SetActivationLevels(actions.segment(idx,4), phase);
+        idx += 4;
     }
     // static int  count = 0;
     // TinyScalar action = 1 + std::max(1000*sin(count++ / 50.), 0.);
@@ -816,7 +909,7 @@ ComputeDragForces(FEM::World<TinyScalar, TinyConstants>* world)
     Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1> velocities = world->GetVelocities();
     Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1> positions = world->GetPositions();
 
-    if (mIsUnderwater) {
+    // if (mIsUnderwater) {
         TinyScalar max_force = 1.0e03;
 
         TinyScalar cl_x[5] = {-90, -10, -5, 15, 90};
@@ -875,24 +968,24 @@ ComputeDragForces(FEM::World<TinyScalar, TinyConstants>* world)
                     std::cin.get();
                 }
 
-                force_drag_per_face = mDragMult * 0.5 * 1000.0 * (1.0*area) * Cd(aoa,f,0.0) * v_rel.squaredNorm() * v_rel_norm;
+                force_drag_per_face = 0.5 * 1000.0 * (1.0*area) * Cd(aoa,f,0.0) * v_rel.squaredNorm() * v_rel_norm;
             }
 
             if (d_dot_v_rel_norm > 0.0)
             {
                 d_lift = (v_rel_norm.cross(d)).normalized().cross(v_rel_norm);
-                force_lift_per_face = mDragMult * 0.5 * 1000.0 * (1.0*area) * Cl(aoa,cutoff,cl_x,cl_y) * v_rel.squaredNorm() * d_lift;
+                force_lift_per_face = 0.5 * 1000.0 * (1.0*area) * Cl(aoa,cutoff,cl_x,cl_y) * v_rel.squaredNorm() * d_lift;
             }
 
             if (force_drag_per_face.norm() > max_force)
             {
-                std::cerr << "Error: max_force reached..." << std::endl;
+                // std::cerr << "Error: max_force reached..." << std::endl;
                 force_drag_per_face = max_force * force_drag_per_face.normalized();
             }
 
             if (force_lift_per_face.norm() > max_force)
             {
-                std::cerr << "Error: max_force reached..." << std::endl;
+                // std::cerr << "Error: max_force reached..." << std::endl;
                 force_lift_per_face = max_force * force_lift_per_face.normalized();
             }
 
@@ -900,7 +993,7 @@ ComputeDragForces(FEM::World<TinyScalar, TinyConstants>* world)
             force_total.template segment<3>(mContours[i][1]*3) += force_drag_per_face/3.0 + force_lift_per_face/3.0;
             force_total.template segment<3>(mContours[i][2]*3) += force_drag_per_face/3.0 + force_lift_per_face/3.0;
         }
-    }
+    // }
     return force_total;
 }
 

@@ -8,12 +8,12 @@
 #include <GL/glu.h>
 #include <GL/glut.h>
 #endif
-namespace p = boost::python;
-namespace np = boost::python::numpy;
+// namespace p = boost::python;
+// namespace np = boost::python::numpy;
 int main(int argc,char** argv)
 {
-	Py_Initialize();
-	np::initialize();
+	// Py_Initialize();
+	// np::initialize();
 	if( argc < 2 ) {
 		SimulationWindow* simwindow = new SimulationWindow();
 		glutInit(&argc, argv);

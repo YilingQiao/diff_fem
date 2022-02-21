@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef DOUBLE_UTILS_H
 #define DOUBLE_UTILS_H
 
@@ -55,18 +71,20 @@ struct DoubleUtils {
 
   static bool getBool(bool v) {  return v; }
 
-  template <class T>
-  static double getDouble(T v) {
-    return (double)v;
-  }
+  static double getDouble(const double& v) { return v; }
 
-  template <class T>
-  static double convert(T) = delete;  // C++11
+  // template <class T>
+  // static double getDouble(T v) {
+  //   return (double)v;
+  // }
+
+  // template <class T>
+  // static double convert(T) = delete;  // C++11
 
   static double convert(int value) { return double(value); }
 
-  template <class T>
-  static double fraction(T, T) = delete;  // C++11
+  // template <class T>
+  // static double fraction(T, T) = delete;  // C++11
 
   static double fraction(int num, int denom) {
     return double(num) / double(denom);

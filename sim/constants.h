@@ -37,6 +37,7 @@ public:
     JointType jointType;
     int bodyIdx, rigidoffset, dofIdx, storedofIdx;
     std::vector<int> indices;
+    std::vector<Eigen::Matrix<TinyScalar, 3, 1> > restpos;
     TinyScalar magnitude, prevmag;
     Eigen::Matrix<TinyScalar, 3, 3> nx, nnt;
     Link() {
@@ -110,7 +111,8 @@ public:
         //compute V0
         for (int k = 0; k < indices.size(); ++k) {
             int rowIdx = 3 * (rigidoffset + k);
-            V0.template segment<3>(rowIdx) = prefix * Tr * (minitX.template segment<3>(indices[k]*3) - joint);
+            V0.template segment<3>(rowIdx) = prefix * Tr * (restpos[k] - joint);
+            // V0.template segment<3>(rowIdx) = prefix * Tr * (minitX.template segment<3>(indices[k]*3) - joint);
         }
         //recursive
         for (auto son : sons)
@@ -138,8 +140,9 @@ public:
         for (int k = 0; k < indices.size(); ++k) {
             int rowIdx = 3 * (rigidoffset + k);
             Link *cur = this;
-            Eigen::Matrix<TinyScalar, 3, 1> vinit = 
-                minitX.template segment<3>(indices[k]*3) - joint;
+            // Eigen::Matrix<TinyScalar, 3, 1> vinit = 
+            //     minitX.template segment<3>(indices[k]*3) - joint;
+            Eigen::Matrix<TinyScalar, 3, 1> vinit = restpos[k] - joint;
             while (cur->parent != NULL) {
                 int colIdx = cur->dofIdx;
                 Eigen::Matrix<TinyScalar, 3, 1> tmp;

@@ -23,6 +23,7 @@ public:
   void  EvaluateDVector(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& x);
   void  GetDVector(int& index,Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& d);
 
+  void  fixIndex(int offset);
   int&       GetI0() {return mi0;}
   Eigen::Matrix<TinyScalar, 3, 1>& GetP()  {return mp;}
   TinyScalar mStretch;
@@ -35,6 +36,12 @@ protected:
 };
 
 
+
+template <typename TinyScalar, typename TinyConstants> 
+void SpringConstraint<TinyScalar, TinyConstants>::fixIndex(int offset) {
+  mi0 += offset;
+  mi1 += offset;
+}
 
 
 template <typename TinyScalar, typename TinyConstants> 
@@ -99,7 +106,7 @@ EvaluateLMatrix(std::vector<Eigen::Triplet<TinyScalar>>& L_triplets)
     0,1,0,0,-1,0,
     0,0,1,0,0,-1;
     
-	Eigen::Matrix<TinyScalar, Eigen::Dynamic, Eigen::Dynamic> MuAiTAi = mStretch*mStretch*((Ai.transpose())*Ai);
+	Eigen::Matrix<TinyScalar, Eigen::Dynamic, Eigen::Dynamic> MuAiTAi = mStretch*((Ai.transpose())*Ai);
 	int idx[2] = {mi0,mi1};
 	//MuAiT --- 12x12 matrix
 	for(int i =0;i<2;i++)
@@ -133,7 +140,7 @@ EvaluateDVector(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& x)
   // std::cout << mStretch << " m_weight\n";
   // std::cout << m_rest_length << " m_rest_length\n";
   e.normalize();  
-  md = mStretch * m_rest_length * e;
+  md = m_rest_length * e;
 }
 
 template <typename TinyScalar, typename TinyConstants> 

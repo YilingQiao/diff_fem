@@ -11,10 +11,11 @@
 #include <fstream>
 #include <CGAL/box_intersection_d.h>
 
+#include "arcsim/collision.hpp"
 #include "../fem/Mesh/CollisionMesh.h"
 #include "timer.h"
 namespace FEM
-{	
+{ 
 
 /// @brief Struct containing the data needed to handle a collision
 template <typename TinyScalar, typename TinyConstants> 
@@ -30,13 +31,31 @@ struct CollisionInfo
   Eigen::Matrix<TinyScalar, 3, 1> speed;
   /// @brief Friction coefficient of the two material in collision.
   TinyScalar friction_coefficient;
+  CollisionInfo(
+      int vi, 
+      const Eigen::Matrix<TinyScalar, 3, 1> &cp,
+      const Eigen::Matrix<TinyScalar, 3, 1> &n, 
+      const Eigen::Matrix<TinyScalar, 3, 1> &s, TinyScalar fc) {
+    vertex_index = vi;
+    contact_point = cp;
+    normal = n;
+    speed = s;
+    friction_coefficient = fc;
+  }
+  CollisionInfo(){}
+  static const TinyScalar default_friction;
 };
+
+template<typename TinyScalar, typename TinyConstants>
+const TinyScalar CollisionInfo<TinyScalar, TinyConstants>::default_friction = 1;
 
 template <typename TinyScalar, typename TinyConstants> 
 struct SelfForceToAdd
 {
     size_t id_plus;
-    size_t id_minus;
+    std::array<int,3> id_minus;
+    Eigen::Matrix<TinyScalar, 3, 1> alpha;
+    // size_t id_minus;
     Eigen::Matrix<TinyScalar, 3, 1> force;
 };
 
@@ -51,13 +70,16 @@ struct SelfCollisionInfo : public CollisionInfo<TinyScalar, TinyConstants>
    * Index of the vertices that make up the triangle with which the vertex
    * collided.
    */
-  std::array<size_t, 3> face_indices;
+  std::array<int, 3> face_indices;
   /**
    * The barycentric coordinate of the point in the face with which the vertex
    * has collided. Currently, since we only handle node-node self-collision,
    * this vector has a coordiante set to 1 and the other to 0.
    */
   Eigen::Matrix<TinyScalar, 3, 1> barycentric_coordinates;
+  size_t vertex_index_b;
+
+  std::vector<size_t> vertex_index_list;
 };
 
 
@@ -82,77 +104,80 @@ struct IndexBox
 template <typename TinyScalar, typename TinyConstants> 
 class CollisionBrutal
 {
-  	using FrictionCoefficientTable = std::vector<std::vector<TinyScalar>>;
+    using FrictionCoefficientTable = std::vector<std::vector<TinyScalar>>;
 public:
-	CollisionBrutal<TinyScalar, TinyConstants>(
-		CollisionMesh<TinyScalar, TinyConstants>* collisionMesh, bool handle_self_collision);
+  CollisionBrutal<TinyScalar, TinyConstants>(
+    CollisionMesh<TinyScalar, TinyConstants>* collisionMesh, bool handle_self_collision);
 
-	
-	void BaseUpdateCollisions(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& X);
-	void LocalCollision() noexcept;
-	std::vector<CollisionInfo<TinyScalar, TinyConstants> > getCollisionsInfo(
-		const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& positions) const;
-	std::vector<SelfCollisionInfo<TinyScalar, TinyConstants> > getSelfCollisionsInfo(
-		TinyScalar tol2) ;
-	std::vector<SelfCollisionInfo<TinyScalar, TinyConstants> > checkMeshSelfCollisions(
-		const CollisionMesh<TinyScalar, TinyConstants>* mesh, TinyScalar tolerance) noexcept;
-	void computeBasis(const Eigen::Matrix<TinyScalar, 3, 1>& normal, Eigen::Matrix<TinyScalar, 3, 3>& basis);
-	void computeCollisionComputationOrder() noexcept;
-	void computeSelfCollisionGraph() noexcept;
-	void fillCollisionComputationOrder(
-		const std::vector<std::size_t>& starting_vertices,
-		std::vector<bool>& visited,
-		std::size_t initial_computation_index) noexcept;
-	std::size_t getSelfCollisionContactPointIndex(
-		const SelfCollisionInfo<TinyScalar, TinyConstants>& self_collision_info) const noexcept;
-	bool vertexIsVisited(std::size_t vertex_index, const std::vector<bool>& visited) const noexcept;
-	std::vector<std::vector<
-	std::pair<typename CollisionMesh<TinyScalar, TinyConstants>::Triangle, Eigen::Matrix<TinyScalar, 3, 1>> > > 
-	checkMeshAllCollision(
-		const std::vector<Eigen::Matrix<TinyScalar, 3, 1>>& vertices, 
-		const CollisionMesh<TinyScalar, TinyConstants>* mesh, 
-		TinyScalar tolerance);
-	std::vector<std::vector<
-		typename CollisionMesh<TinyScalar, TinyConstants>::Triangle> > 
-		getMeshPotentialTriangleCollision(
-		const std::vector<Eigen::Matrix<TinyScalar, 3, 1>>& vertices,
-		const CollisionMesh<TinyScalar, TinyConstants>* mesh,
-		TinyScalar tolerance);
-	CGAL::Bbox_3 getToleranceBoundingBox(const Eigen::Matrix<TinyScalar, 3, 1>& vertex, TinyScalar tolerance);
-	void closestPointToTriangle(const Eigen::Matrix<TinyScalar, 3, 1>& p,
-		const Eigen::Matrix<TinyScalar, 3, 3>& triangle,
-		TinyScalar tol2,
-		Eigen::Matrix<TinyScalar, 3, 1>& closest_point,
-		Eigen::Matrix<TinyScalar, 3, 1>* barycentric_coordinates_ptr) noexcept;
-	std::size_t isTriangleVertexIndexIn(
-		const typename CollisionMesh<TinyScalar, TinyConstants>::Triangle& triangle, 
-		const std::vector<size_t>& vertices_indices);
+  
+  bool BaseUpdateCollisions(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& X);
+  void ClearCollisions();
+  void LocalCollision() noexcept;
+  std::vector<CollisionInfo<TinyScalar, TinyConstants> > getCollisionsInfo(
+    const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& positions) const;
+  std::vector<SelfCollisionInfo<TinyScalar, TinyConstants> > getSelfCollisionsInfo(
+    TinyScalar tol2) ;
+  std::vector<SelfCollisionInfo<TinyScalar, TinyConstants> > checkMeshSelfCollisions(
+    const CollisionMesh<TinyScalar, TinyConstants>* mesh, TinyScalar tolerance) noexcept;
+  void computeBasis(const Eigen::Matrix<TinyScalar, 3, 1>& normal, Eigen::Matrix<TinyScalar, 3, 3>& basis);
+  void computeCollisionComputationOrder() noexcept;
+  void computeSelfCollisionGraph() noexcept;
+  void fillCollisionComputationOrder(
+    const std::vector<std::size_t>& starting_vertices,
+    std::vector<bool>& visited,
+    std::size_t initial_computation_index) noexcept;
+  std::size_t getSelfCollisionContactPointIndex(
+    const SelfCollisionInfo<TinyScalar, TinyConstants>& self_collision_info) const noexcept;
+  bool vertexIsVisited(std::size_t vertex_index, const std::vector<bool>& visited) const noexcept;
+  std::vector<std::vector<
+  // std::pair<typename CollisionMesh<TinyScalar, TinyConstants>::Triangle, Eigen::Matrix<TinyScalar, 3, 1>> > > 
+  std::pair<Impact*, Eigen::Matrix<TinyScalar, 3, 1>> > > 
+  checkMeshAllCollision(
+    const std::vector<Eigen::Matrix<TinyScalar, 3, 1>>& vertices, 
+    const CollisionMesh<TinyScalar, TinyConstants>* mesh, 
+    TinyScalar tolerance);
+  std::vector<std::vector<
+    typename CollisionMesh<TinyScalar, TinyConstants>::Triangle> > 
+    getMeshPotentialTriangleCollision(
+    const std::vector<Eigen::Matrix<TinyScalar, 3, 1>>& vertices,
+    const CollisionMesh<TinyScalar, TinyConstants>* mesh,
+    TinyScalar tolerance);
+  CGAL::Bbox_3 getToleranceBoundingBox(const Eigen::Matrix<TinyScalar, 3, 1>& vertex, TinyScalar tolerance);
+  void closestPointToTriangle(const Eigen::Matrix<TinyScalar, 3, 1>& p,
+    const Eigen::Matrix<TinyScalar, 3, 3>& triangle,
+    TinyScalar tol2,
+    Eigen::Matrix<TinyScalar, 3, 1>& closest_point,
+    Eigen::Matrix<TinyScalar, 3, 1>* barycentric_coordinates_ptr) noexcept;
+  std::size_t isTriangleVertexIndexIn(
+    const typename CollisionMesh<TinyScalar, TinyConstants>::Triangle& triangle, 
+    const std::vector<size_t>& vertices_indices);
 
 
-	std::vector<int> m_collision_numbers;
-  TinyScalar m_self_collision_tol2 = 1e-6; 
-  // TinyScalar m_self_collision_tol2 = 0.0025;  
-	std::vector<TinyScalar> m_step_times;
-	std::vector<TinyScalar> m_rhs_times;
-	std::vector<TinyScalar> m_global_times;
-	std::vector<TinyScalar> m_iteration_times;
-	std::vector<TinyScalar> m_collision_detection_times;
-	std::vector<TinyScalar> m_self_collision_detection_times;
-	std::vector<size_t> m_self_collision_numbers;
-	CollisionMesh<TinyScalar, TinyConstants>* mCollisionMesh;
-	
-	
+  std::vector<int> m_collision_numbers;
+  // TinyScalar m_self_collision_tol2 = 1e-6; 
+  // TinyScalar m_self_collision_tol2 = 0.0025;
+  double m_self_collision_tol2 = 1e-4;    
+  std::vector<TinyScalar> m_step_times;
+  std::vector<TinyScalar> m_rhs_times;
+  std::vector<TinyScalar> m_global_times;
+  std::vector<TinyScalar> m_iteration_times;
+  std::vector<TinyScalar> m_collision_detection_times;
+  std::vector<TinyScalar> m_self_collision_detection_times;
+  std::vector<size_t> m_self_collision_numbers;
+  CollisionMesh<TinyScalar, TinyConstants>* mCollisionMesh;
+  
+  
   FrictionCoefficientTable m_friction_coefficients;
-	//@brief Collision info should be kept sorted in respect to the vertex indices
-	//TODO: use a better data structure for sorted collections.
-	std::vector<CollisionInfo<TinyScalar, TinyConstants>> m_collisions_infos;
-	std::vector<SelfCollisionInfo<TinyScalar, TinyConstants>> m_self_collisions_infos;
-	TinyScalar m_damping_coefficient;
-	/// @brief
-	Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1> m_damping;
-  	bool m_handle_self_collision = true;
+  //@brief Collision info should be kept sorted in respect to the vertex indices
+  //TODO: use a better data structure for sorted collections.
+  std::vector<CollisionInfo<TinyScalar, TinyConstants>> m_collisions_infos;
+  std::vector<SelfCollisionInfo<TinyScalar, TinyConstants>> m_self_collisions_infos;
+  TinyScalar m_damping_coefficient;
+  /// @brief
+  Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1> m_damping;
+    bool m_handle_self_collision = true;
 
-	// frecitionestimation
+  // frecitionestimation
 
     std::vector<Eigen::Matrix<TinyScalar, 3, 3>> m_local_contact_basis;
 
@@ -220,6 +245,8 @@ public:
     Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1> m_generalized_positions;
     /// @brief ...
     Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1> m_generalized_speeds;
+    ArcsimMesh *mMesh, *mObsMesh;
+    vector<Impact> impacts, obsImpacts;
 };
 
 template <typename TinyScalar, typename TinyConstants> 
@@ -243,10 +270,58 @@ CollisionBrutal(CollisionMesh<TinyScalar, TinyConstants>* collisionMesh,
 
 template <typename TinyScalar, typename TinyConstants> 
 void CollisionBrutal<TinyScalar, TinyConstants>::
+ClearCollisions() {
+  impacts.clear();
+  obsImpacts.clear();
+  m_collisions_infos.clear();
+  m_self_collisions_infos.clear();
+}
+
+
+template <typename TinyScalar, typename TinyConstants> 
+bool CollisionBrutal<TinyScalar, TinyConstants>::
 BaseUpdateCollisions(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& X) 
 {
   TIMER_START(collision_detection);
   
+  vector<Impact> newimpacts, newobsImpacts;
+  int tmp = m_self_collisions_infos.size();
+  boost::tie(newimpacts, newobsImpacts) = collision_detection(mMesh, mObsMesh);
+  //add and unique
+  for (int i = 0; i < newimpacts.size(); ++i) {
+    int j = 0;
+    for (j = 0; j < impacts.size(); ++j) {
+      bool flag = true;
+      for (int k = 0; k < 4; ++k)
+        if (impacts[j].nodes[k]->index!=newimpacts[i].nodes[k]->index) {
+          flag = false;
+          break;
+        }
+      if (flag) {
+        impacts[j] = newimpacts[i];
+        break;
+      }
+    }
+    if (j == impacts.size())
+      impacts.push_back(newimpacts[i]);
+  }
+  for (int i = 0; i < newobsImpacts.size(); ++i) {
+    int j = 0;
+    for (j = 0; j < obsImpacts.size(); ++j) {
+      bool flag = true;
+      for (int k = 0; k < 4; ++k)
+        if (obsImpacts[j].nodes[k]->index!=newobsImpacts[i].nodes[k]->index) {
+          flag = false;
+          break;
+        }
+      if (flag) {
+        obsImpacts[j] = newobsImpacts[i];
+        break;
+      }
+    }
+    if (j == obsImpacts.size())
+      obsImpacts.push_back(newobsImpacts[i]);
+  }
   m_collisions_infos = getCollisionsInfo(X);
   
   if (m_collisions_infos.size() > 0) 
@@ -295,16 +370,19 @@ BaseUpdateCollisions(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& X)
         // std::cout << m_damping.size() << " m_damping.size() \n";
         // std::cout << m_self_collisions_infos[scId].vertex_index << 
         //   " m_self_collisions_infos[scId].vertex_index \n";
-        m_damping[m_self_collisions_infos[scId].vertex_index] = 0.;
-        // other vertex
-        const Eigen::Matrix<TinyScalar, 3, 1> &alpha = m_self_collisions_infos[scId].barycentric_coordinates;
-        const std::array<size_t, 3> &nId = m_self_collisions_infos[scId].face_indices;
-        const size_t ovId =
-          (alpha[0] > alpha[1]) ?
-          ((alpha[0] > alpha[2]) ? nId[0] : nId[2]) :
-          ((alpha[1] > alpha[2]) ? nId[1] : nId[2]);
+        // m_damping[m_self_collisions_infos[scId].vertex_index] = 0.;
+        // // other vertex
+        // const Eigen::Matrix<TinyScalar, 3, 1> &alpha = m_self_collisions_infos[scId].barycentric_coordinates;
+        // const std::array<size_t, 3> &nId = m_self_collisions_infos[scId].face_indices;
+        // const size_t ovId =
+        //   (alpha[0] > alpha[1]) ?
+        //   ((alpha[0] > alpha[2]) ? nId[0] : nId[2]) :
+        //   ((alpha[1] > alpha[2]) ? nId[1] : nId[2]);
+        for (int k = 0; k < m_self_collisions_infos[scId].vertex_index_list.size(); ++k)
+          m_damping[m_self_collisions_infos[scId].vertex_index_list[k]] = 0.;
 
-        m_damping[ovId] = 0.;
+        // const size_t ovId = m_self_collisions_infos[scId].vertex_index_b;
+        // m_damping[ovId] = 0.;
       } // vId
     }
 
@@ -323,15 +401,17 @@ BaseUpdateCollisions(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& X)
   }
   
   LocalCollision();
+  // std::cout << tmp << " " << m_self_collisions_infos.size() << std::endl;
+  return newobsImpacts.empty() && tmp == m_self_collisions_infos.size(); //newobsImpacts.empty();
 }
 
 template <typename TinyScalar, typename TinyConstants> 
 void CollisionBrutal<TinyScalar, TinyConstants>::
 computeBasis(const Eigen::Matrix<TinyScalar, 3, 1>& normal, Eigen::Matrix<TinyScalar, 3, 3>& basis)
 {
-	
-	const Eigen::Matrix<TinyScalar, 3, 1> test1(1., 0., 0.);
-	const Eigen::Matrix<TinyScalar, 3, 1> test2(0., 1., 0.);
+  
+  const Eigen::Matrix<TinyScalar, 3, 1> test1(1., 0., 0.);
+  const Eigen::Matrix<TinyScalar, 3, 1> test2(0., 1., 0.);
     Eigen::Matrix<TinyScalar, 3, 1> tangent = normal.cross(test1);
     if (tangent.norm() < 1.e-15)
     {
@@ -340,9 +420,9 @@ computeBasis(const Eigen::Matrix<TinyScalar, 3, 1>& normal, Eigen::Matrix<TinySc
     tangent.normalize();
     const Eigen::Matrix<TinyScalar, 3, 1> bitangent = normal.cross(tangent).normalized();
 
-    basis.col(0) = normal;
-    basis.col(1) = tangent;
-    basis.col(2) = bitangent;
+    basis.col(0) = normal.normalized();
+    basis.col(1) = tangent.normalized();
+    basis.col(2) = bitangent.normalized();
 }
 
 template <typename TinyScalar, typename TinyConstants> 
@@ -381,16 +461,24 @@ LocalCollision() noexcept
         } // scId
     }     // omp parallel
 
-    if (m_handle_self_collision && !m_self_collisions_infos.empty())
-    {
-        TIMER_START(collision_ordering)
-        computeCollisionComputationOrder();
-        const TinyScalar collision_ordering_duration = TIMER_DURATION(collision_ordering, microseconds);
-#ifdef TIMER_PRINT
-        std::cout << "# Collision Ordering: " << collision_ordering_duration << "µs" << std::endl;
-#endif // TIMER_PRINT
-        m_self_collision_ordering_times.push_back(collision_ordering_duration);
-    }
+//     if (m_handle_self_collision && !m_self_collisions_infos.empty())
+//     {
+//         TIMER_START(collision_ordering)
+//         computeCollisionComputationOrder();
+//         const TinyScalar collision_ordering_duration = TIMER_DURATION(collision_ordering, microseconds);
+// #ifdef TIMER_PRINT
+//         std::cout << "# Collision Ordering: " << collision_ordering_duration << "µs" << std::endl;
+// #endif // TIMER_PRINT
+//         m_self_collision_ordering_times.push_back(collision_ordering_duration);
+//     }
+}
+
+template<typename TinyScalar, typename TinyConstants>
+Eigen::Matrix<TinyScalar, 3, 1> vec3ToEigen(const Vec3 &x) {
+  return Eigen::Matrix<TinyScalar, 3, 1>(
+      TinyConstants::scalar_from_double( x[0] ),
+      TinyConstants::scalar_from_double( x[1] ),
+      TinyConstants::scalar_from_double( x[2] ));
 }
 
 template <typename TinyScalar, typename TinyConstants> 
@@ -400,52 +488,16 @@ getCollisionsInfo(const Eigen::Matrix<TinyScalar, Eigen::Dynamic, 1>& positions)
     // TODO: Use better data structures to parallelize.
     std::vector<CollisionInfo<TinyScalar, TinyConstants>> result;
 
-
-    const std::size_t vertices_number = positions.size();
-
-    std::size_t exception_index = 0;
-    std::vector<size_t> index_maping;
-    std::vector<Eigen::Matrix<TinyScalar, 3, 1>> vertices;
-	// vertices and posisions are not the same
-    for (std::size_t position_index = 0; position_index < vertices_number; ++position_index)
-    {
-        // Check the exceptions, assuming that exceptions is sorted
-        vertices.push_back(getVector3dBlock<TinyScalar, TinyConstants>(positions, position_index));
-        index_maping.push_back(position_index);
+    for (auto impact : obsImpacts) {
+      result.push_back(
+        CollisionInfo<TinyScalar, TinyConstants>(impact.nodes[0]->index,
+            vec3ToEigen<TinyScalar, TinyConstants>(impact.contactPoint),
+            vec3ToEigen<TinyScalar, TinyConstants>(impact.n),
+            vec3ToEigen<TinyScalar, TinyConstants>(impact.nodes[0]->x - impact.nodes[0]->x0),
+            CollisionInfo<TinyScalar, TinyConstants>::default_friction
+          ));
     }
 
-    std::vector<std::size_t> colliding_vertices_indices;
-    std::vector<Eigen::Matrix<TinyScalar, 3, 1>> contact_points;
-    std::vector<Eigen::Matrix<TinyScalar, 3, 1>> normals;
-    std::vector<Eigen::Matrix<TinyScalar, 3, 1>> speeds;
-
-    std::size_t colliding_position_index;
-    std::size_t colliding_position_material_identifier;
-    // for (const auto& obstacle_ptr : m_obstacles)
-    // {
-    //     colliding_vertices_indices.clear();
-    //     contact_points.clear();
-    //     normals.clear();
-    //     speeds.clear();
-    //     obstacle_ptr->checkCollision(
-    //       vertices, colliding_vertices_indices, contact_points, normals, speeds);
-
-    //     for (std::size_t collision_index = 0; collision_index < contact_points.size();
-    //          ++collision_index)
-    //     {
-    //         colliding_position_index = index_maping[colliding_vertices_indices[collision_index]];
-    //         colliding_position_material_identifier =
-    //           getContainingMesh(colliding_position_index)->getMaterialIdentifier();
-
-    //         result.push_back(
-    //           CollisionInfo{ colliding_position_index,
-    //                          contact_points[collision_index],
-    //                          normals[collision_index],
-    //                          speeds[collision_index],
-    //                          m_friction_coefficients[colliding_position_material_identifier]
-    //                                                 [obstacle_ptr->getMaterialIdentifier()] });
-    //     }
-    // }
 
     return result;
 }
@@ -484,10 +536,7 @@ std::size_t CollisionBrutal<TinyScalar, TinyConstants>::
 getSelfCollisionContactPointIndex(
   const SelfCollisionInfo<TinyScalar, TinyConstants>& self_collision_info) const noexcept
 {
-    const Eigen::Matrix<TinyScalar, 3, 1>& alpha = self_collision_info.barycentric_coordinates;
-    return self_collision_info
-      .face_indices[(alpha[0] > alpha[1]) ? ((alpha[0] > alpha[2]) ? 0 : 2)
-                                          : ((alpha[1] > alpha[2]) ? 1 : 2)];
+    return self_collision_info.vertex_index_b;
 }
 
 
@@ -596,6 +645,72 @@ std::vector<SelfCollisionInfo<TinyScalar, TinyConstants>> CollisionBrutal<TinySc
 getSelfCollisionsInfo(TinyScalar tol2) 
 {
     std::vector<SelfCollisionInfo<TinyScalar, TinyConstants> > result;
+    //filter: each vertex with only one face
+    std::map<int, Impact*> closest;
+    for (int i = 0; i < impacts.size(); ++i) {
+      Impact &imp = impacts[i];
+      // std::cout << "impact!";
+      // for (int i = 0; i < 4; ++i)
+      //   std::cout << " " << imp.nodes[i]->index;
+      // std::cout<<std::endl;
+      // std::cout << imp.n<<":"<<" ";
+      // for (int i = 0; i < 4; ++i)
+      //   std::cout << " " << imp.w[i];
+      // std::cout << std::endl;
+      int vId = imp.nodes[0]->index;
+      if (closest.find(vId) == closest.end()) {
+        closest[vId] = &imp;
+        continue;
+      }
+      Impact *imp_old = closest[vId];
+      if (imp.t < imp_old->t) {
+        closest[vId] = &imp;
+        continue;
+      }
+      if (imp_old->t == 1 && imp_old->d > imp.d)
+        closest[vId] = &imp;
+    }
+    //collect: record all vertices with the same face
+    for (auto it : closest) {
+      int vId = it.first;
+      Impact *imp = it.second;
+      bool found = false;
+      int i;
+      for (i = 0; i < result.size(); ++i) {
+        bool equal = true;
+        for (int k = 0; k < 3; ++k)
+          if (result[i].face_indices[k] != imp->nodes[k+1]->index) {
+            equal = false;
+            break;
+          }
+        if (equal) {
+          found = true;
+          break;
+        }
+      }
+      if (found) {
+        result[i].vertex_index_list.push_back(vId);
+      } else {
+        SelfCollisionInfo<TinyScalar, TinyConstants> info;
+        info.friction_coefficient = CollisionInfo<TinyScalar, TinyConstants>::default_friction;
+        info.normal = vec3ToEigen<TinyScalar, TinyConstants>(imp->n);
+        // info.barycentric_coordinates = barycentric_coordinates;            
+        info.face_indices = {imp->nodes[1]->index,imp->nodes[2]->index,imp->nodes[3]->index};
+        info.vertex_index_list = {vId};
+        result.push_back(info);
+      }
+    }
+    // for (int i = 0; i < result.size(); ++i) {
+    //   std::cout << "result! (";
+    //   for (int k = 0; k < 3; ++k)
+    //     std::cout << result[i].face_indices[k] << " ";
+    //   std::cout << ") ";
+    //   for (int k = 0; k < result[i].vertex_index_list.size(); ++k)
+    //     std::cout << result[i].vertex_index_list[k] << " ";
+    //   std::cout<<std::endl;
+    // }
+    return result;
+
     std::vector<SelfCollisionInfo<TinyScalar, TinyConstants> > collisions_infos;
 
     std::size_t material_identifier;
@@ -606,7 +721,7 @@ getSelfCollisionsInfo(TinyScalar tol2)
             collisions_infos = checkMeshSelfCollisions(mCollisionMesh, TinyConstants::sqrt1(tol2));
             for (auto& collision_info : collisions_infos)
             {
-                collision_info.friction_coefficient = 0.1;
+                collision_info.friction_coefficient = CollisionInfo<TinyScalar, TinyConstants>::default_friction;
                 // collision_info.friction_coefficient = m_friction_coefficients[material_identifier][material_identifier];
             }
             result.insert(result.end(), collisions_infos.begin(), collisions_infos.end());
@@ -635,7 +750,7 @@ getToleranceBoundingBox(const Eigen::Matrix<TinyScalar, 3, 1>& vertex, TinyScala
 
 template <typename TinyScalar, typename TinyConstants> 
 std::vector<std::vector<typename CollisionMesh<TinyScalar, TinyConstants>::Triangle> > 
-	CollisionBrutal<TinyScalar, TinyConstants>::
+  CollisionBrutal<TinyScalar, TinyConstants>::
 getMeshPotentialTriangleCollision(const std::vector<Eigen::Matrix<TinyScalar, 3, 1>>& vertices,
                                   const CollisionMesh<TinyScalar, TinyConstants>* mesh,
                                   TinyScalar tolerance)
@@ -657,7 +772,7 @@ getMeshPotentialTriangleCollision(const std::vector<Eigen::Matrix<TinyScalar, 3,
     }
 
     std::vector<std::vector<typename CollisionMesh<TinyScalar, TinyConstants>::Triangle> > 
-		result(vertices.size());
+    result(vertices.size());
 
     CGAL::box_intersection_d(
       mesh_boxes.begin(),
@@ -675,44 +790,62 @@ getMeshPotentialTriangleCollision(const std::vector<Eigen::Matrix<TinyScalar, 3,
 
 template <typename TinyScalar, typename TinyConstants> 
 std::vector<std::vector<std::pair<
-	typename CollisionMesh<TinyScalar, TinyConstants>::Triangle, Eigen::Matrix<TinyScalar, 3, 1>> > > 
+  Impact*, Eigen::Matrix<TinyScalar, 3, 1>> > > 
 
 CollisionBrutal<TinyScalar, TinyConstants>::
 checkMeshAllCollision(const std::vector<Eigen::Matrix<TinyScalar, 3, 1>>& vertices,
                       const CollisionMesh<TinyScalar, TinyConstants>* mesh,
                       TinyScalar tolerance)
 {
-    std::vector<std::vector<
-		typename CollisionMesh<TinyScalar, TinyConstants>::Triangle> > collision_to_check =
-      	getMeshPotentialTriangleCollision(vertices, mesh, 1.1 * tolerance);
+  //   std::vector<std::vector<
+    // typename CollisionMesh<TinyScalar, TinyConstants>::Triangle> > collision_to_check =
+  //      getMeshPotentialTriangleCollision(vertices, mesh, 1.1 * tolerance);
 
     std::vector<std::vector<std::pair<
-		typename CollisionMesh<TinyScalar, TinyConstants>::Triangle, Eigen::Matrix<TinyScalar, 3, 1>> > > 
-		result(vertices.size());
+    // typename CollisionMesh<TinyScalar, TinyConstants>::Triangle, Eigen::Matrix<TinyScalar, 3, 1>> > > 
+    Impact*, Eigen::Matrix<TinyScalar, 3, 1>> > > 
+    result(vertices.size());
     
 
-    Eigen::Matrix<TinyScalar, 3, 1> current_point;
-    Eigen::Matrix<TinyScalar, 3, 1> current_point_barycentric_coordinate;
-    const TinyScalar tolerance_squared = tolerance * tolerance;
-    for (std::size_t vertex_index = 0; vertex_index < vertices.size(); ++vertex_index)
-    {
-        for (const typename CollisionMesh<TinyScalar, TinyConstants>::Triangle& 
-			       triangle : collision_to_check[vertex_index])
-        {
-            const Eigen::Matrix<TinyScalar, 3, 1>& vertex = vertices[vertex_index];
-            closestPointToTriangle(vertex,
-                                   mesh->getTriangle(triangle),
-                                   tolerance,
-                                   current_point,
-                                   &current_point_barycentric_coordinate);
-            
-            if ((current_point - vertex).squaredNorm() < tolerance_squared)
-            {
-                result[vertex_index].push_back(
-                  std::make_pair(triangle, current_point_barycentric_coordinate));
-            }
-        }
+    for (int i = 0; i < impacts.size(); ++i) {
+      Impact &impact = impacts[i];
+      std::cout << "impact!";
+      for (int i = 0; i < 4; ++i)
+        std::cout << " " << impact.nodes[i]->index;
+      std::cout<<std::endl;
+      std::cout << impact.n<<":"<<" ";
+      for (int i = 0; i < 4; ++i)
+        std::cout << " " << impact.w[i];
+      std::cout << std::endl;
+      result[impact.nodes[0]->index].push_back(make_pair(
+        &impact,
+        // typename CollisionMesh<TinyScalar, TinyConstants>::Triangle{impact.nodes[1]->index,impact.nodes[2]->index,impact.nodes[3]->index},
+        Eigen::Matrix<TinyScalar, 3, 1>(-impact.w[1],-impact.w[2],-impact.w[3])
+        ));
     }
+
+    // Eigen::Matrix<TinyScalar, 3, 1> current_point;
+    // Eigen::Matrix<TinyScalar, 3, 1> current_point_barycentric_coordinate;
+    // const TinyScalar tolerance_squared = tolerance * tolerance;
+    // for (std::size_t vertex_index = 0; vertex_index < vertices.size(); ++vertex_index)
+    // {
+    //     for (const typename CollisionMesh<TinyScalar, TinyConstants>::Triangle& 
+       //       triangle : collision_to_check[vertex_index])
+    //     {
+    //         const Eigen::Matrix<TinyScalar, 3, 1>& vertex = vertices[vertex_index];
+    //         closestPointToTriangle(vertex,
+    //                                mesh->getTriangle(triangle),
+    //                                tolerance,
+    //                                current_point,
+    //                                &current_point_barycentric_coordinate);
+            
+    //         if ((current_point - vertex).squaredNorm() < tolerance_squared)
+    //         {
+    //             result[vertex_index].push_back(
+    //               std::make_pair(triangle, current_point_barycentric_coordinate));
+    //         }
+    //     }
+    // }
     return result;
 }
 
@@ -720,15 +853,36 @@ template <typename TinyScalar, typename TinyConstants>
 std::vector<SelfCollisionInfo<TinyScalar, TinyConstants> >
 CollisionBrutal<TinyScalar, TinyConstants>::
 checkMeshSelfCollisions(
-	const CollisionMesh<TinyScalar, TinyConstants>* mesh, TinyScalar tolerance) noexcept
+  const CollisionMesh<TinyScalar, TinyConstants>* mesh, TinyScalar tolerance) noexcept
 {
+    // std::vector<SelfCollisionInfo<TinyScalar, TinyConstants>> result_me;
+    // for (auto impact : impacts) {
+    //   std::cout << "impact!";
+    //   for (int i = 0; i < 4; ++i)
+    //     std::cout << " " << impact.nodes[i]->index;
+    //   std::cout<<std::endl;
+    //   SelfCollisionInfo<TinyScalar, TinyConstants> self_collision_info;
+    //   self_collision_info.normal = vec3ToEigen<TinyScalar, TinyConstants>(impact.n);
+    //   Eigen::Matrix<TinyScalar, 3, 1> barycentric_coordinates;
+    //   for (int k = 0; k < 3; ++k)
+    //     barycentric_coordinates[k] = -impact.w[k+1];
+    //   self_collision_info.barycentric_coordinates = barycentric_coordinates;            
+    //   self_collision_info.face_indices = {impact.nodes[1]->index,impact.nodes[2]->index,impact.nodes[3]->index};
+    //   self_collision_info.vertex_index_b = impact.nodes[1]->index;
+    //   self_collision_info.contact_point = vec3ToEigen<TinyScalar, TinyConstants>(impact.contactPoint);
+    //   self_collision_info.vertex_index = impact.nodes[0]->index;
+    //   result_me.push_back(self_collision_info);
+    // }
+    // return result_me;
+
     std::vector<Eigen::Matrix<TinyScalar, 3, 1>> vertices = mesh->getVertices();
 
   
 
     std::vector<std::vector<std::pair<
-		typename CollisionMesh<TinyScalar, TinyConstants>::Triangle, Eigen::Matrix<TinyScalar, 3, 1>> > > 
-		collisions_infos = checkMeshAllCollision(vertices, mesh, tolerance);
+    // typename CollisionMesh<TinyScalar, TinyConstants>::Triangle, Eigen::Matrix<TinyScalar, 3, 1>> > > 
+    Impact*, Eigen::Matrix<TinyScalar, 3, 1>> > > 
+    collisions_infos = checkMeshAllCollision(vertices, mesh, tolerance);
 
 
     std::vector<SelfCollisionInfo<TinyScalar, TinyConstants>> result;
@@ -740,6 +894,7 @@ checkMeshSelfCollisions(
 
     std::vector<std::vector<size_t> > registered;
     registered.resize(vertices.size());
+    Impact *impact;
     
     // Since we only do node-node contact, we pair each vertex in collision with
     // one other vertex. For each face, we make sure that the vertex is paired
@@ -749,26 +904,28 @@ checkMeshSelfCollisions(
     {
         for (const auto& collision_info : collisions_infos[vertex_index])
         {
-            boost::tie(triangle, barycentric_coordinates) = collision_info;
+            boost::tie(impact, barycentric_coordinates) = collision_info;
+            triangle = 
+        typename CollisionMesh<TinyScalar, TinyConstants>::Triangle{impact->nodes[1]->index,impact->nodes[2]->index,impact->nodes[3]->index};
             // If the colliding vertex is part of the triangle or if it is on
             // the edge we don't count this as a collision.
-            if (std::find(triangle.vertex_indices.begin(),
-                          triangle.vertex_indices.end(),
-                          vertex_index) != triangle.vertex_indices.end() ||
-                barycentric_coordinates.x() == 0 || barycentric_coordinates.y() == 0 ||
-                barycentric_coordinates.z() == 0)
-            {
+            // if (std::find(triangle.vertex_indices.begin(),
+            //               triangle.vertex_indices.end(),
+            //               vertex_index) != triangle.vertex_indices.end() ||
+            //     barycentric_coordinates.x() == 0 || barycentric_coordinates.y() == 0 ||
+            //     barycentric_coordinates.z() == 0)
+            // {
 
-                continue;
-            }
+            //     continue;
+            // }
 
             // The colliding vertex is already paired with a vertex of this
             // triangle so we cannot count a collision with this triangle.
-            if (isTriangleVertexIndexIn(triangle, registered[vertex_index]) < 3u)
-            {
+            // if (isTriangleVertexIndexIn(triangle, registered[vertex_index]) < 3u)
+            // {
               
-                continue;
-            }
+            //     continue;
+            // }
 
             // We try to find a vertex within the triangle that is not is
             // contact with a vertex adjacent to the colliding vertex. If we
@@ -777,14 +934,14 @@ checkMeshSelfCollisions(
             // that are part of the same triangle, the colliding vertex and its
             // adjacent vertex.
             std::fill(face_vertices_candidate.begin(), face_vertices_candidate.end(), true);
-            for (std::size_t one_ring_vertex_index : mesh->getVerticesAroundVertexRange(vertex_index))
-            {
-                std::size_t triangle_vertex_index = isTriangleVertexIndexIn(triangle, registered[one_ring_vertex_index]);
-                if (triangle_vertex_index < 3u)
-                {
-                    face_vertices_candidate[triangle_vertex_index] = false;
-                }
-            }
+            // for (std::size_t one_ring_vertex_index : mesh->getVerticesAroundVertexRange(vertex_index))
+            // {
+            //     std::size_t triangle_vertex_index = isTriangleVertexIndexIn(triangle, registered[one_ring_vertex_index]);
+            //     if (triangle_vertex_index < 3u)
+            //     {
+            //         face_vertices_candidate[triangle_vertex_index] = false;
+            //     }
+            // }
 
             // Among the candidate obtained in the previous loop. We take the
             // closest one.
@@ -813,13 +970,13 @@ checkMeshSelfCollisions(
             }
 
             contact_point = mesh->getTriangle(triangle) * barycentric_coordinates;
-            self_collision_info.normal =
-              (mesh->getVertex(vertex_index) - contact_point).normalized();
+            self_collision_info.normal = vec3ToEigen<TinyScalar, TinyConstants>(impact->n);
+              // (mesh->getVertex(vertex_index) - contact_point).normalized();
             
             std::size_t paired_vertex_index = triangle.vertex_indices[closest_candidate_index];
-            barycentric_coordinates[closest_candidate_index] = 1.;
-            barycentric_coordinates[(closest_candidate_index + 1) % 3] = 0.;
-            barycentric_coordinates[(closest_candidate_index + 2) % 3] = 0.;
+            // barycentric_coordinates[closest_candidate_index] = 1.;
+            // barycentric_coordinates[(closest_candidate_index + 1) % 3] = 0.;
+            // barycentric_coordinates[(closest_candidate_index + 2) % 3] = 0.;
 
             // Keep track of which vertex has been paired with which.
             registered[paired_vertex_index].push_back(vertex_index);
@@ -828,8 +985,9 @@ checkMeshSelfCollisions(
             contact_point = mesh->getTriangle(triangle) * barycentric_coordinates;
             self_collision_info.barycentric_coordinates = barycentric_coordinates;            
             self_collision_info.face_indices = triangle.vertex_indices;
+            self_collision_info.vertex_index_b = triangle.vertex_indices[closest_candidate_index];
             self_collision_info.contact_point = contact_point;
-#warning Suppose there is only one mesh simulated
+// #warning Suppose there is only one mesh simulated
             self_collision_info.vertex_index = vertex_index;
             result.push_back(std::move(self_collision_info));
               
@@ -973,15 +1131,15 @@ closestPointToTriangle(const Eigen::Matrix<TinyScalar, 3, 1>& p,
 template <typename TinyScalar, typename TinyConstants> 
 std::size_t CollisionBrutal<TinyScalar, TinyConstants>::
 isTriangleVertexIndexIn(
-	const typename CollisionMesh<TinyScalar, TinyConstants>::Triangle& triangle, 
-	const std::vector<size_t>& vertices_indices)
+  const typename CollisionMesh<TinyScalar, TinyConstants>::Triangle& triangle, 
+  const std::vector<size_t>& vertices_indices)
 {
-	auto triangle_vertex_index_it = std::find_first_of(
-		triangle.vertex_indices.begin(),
-		triangle.vertex_indices.end(),
-		vertices_indices.begin(),
-		vertices_indices.end());
-	return std::distance(triangle.vertex_indices.begin(), triangle_vertex_index_it);
+  auto triangle_vertex_index_it = std::find_first_of(
+    triangle.vertex_indices.begin(),
+    triangle.vertex_indices.end(),
+    vertices_indices.begin(),
+    vertices_indices.end());
+  return std::distance(triangle.vertex_indices.begin(), triangle_vertex_index_it);
 }
 
 

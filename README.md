@@ -1,13 +1,73 @@
+
 # Differentiable Simulation of Soft Multi-body Systems
 
 *Yi-Ling Qiao, Junbang Liang, Vladlen Koltun, Ming C. Lin*
 
-[[Paper]](http://vladlen.info/publications/differentiable-simulation-soft-multi-body-systems/) [[Code]](https://github.com/YilingQiao/diff_fem)
-
+[[Paper]](http://vladlen.info/publications/differentiable-simulation-soft-multi-body-systems/) [[Code]](https://github.com/YilingQiao/diff_fem) [[Video]](https://youtu.be/TPgFM5WxzaU)
 ## Updates
+1. Link to a demo video.
+2. cmakelist and setup files.
+3. demos for inverse problems and forward simulation.
 
-The C++ backend simulator files are in `./sim/` and `./utils/`. We will soon update more demos and documentations.
+## TODO
+1. More demos for the control problems.
+2. More documents for the config files.
+3. Utils for make tet meshes.
+4. More readme documentation.
 
+## Setup
+1. Create a conda virtual environment and activate it.
+```bash
+conda create -n difem python=3.8 -y
+conda activate difem
+```
+
+2. Download and build the project.
+```bash
+git clone git@github.com:YilingQiao/diff_fem.git
+cd diff_fem
+git submodule init
+git submodule update
+python setup.py install
+```
+3. Run the examples
+## Examples
+### Inverse problem
+1. Suspension bridge (Fig. 3a in the paper)
+```bash
+python python/demo_sus.py
+```
+2. Arch bridge (Fig. 3c in the paper)
+```bash
+python python/demo_br.py
+```
+
+For the above 2 experiments, the output meshes are stored in `out/`
+### Control Problems
+TODO
+
+### Forward Simulation
+Note that our simulator can be used for pure forward simulation. In this case, we replace the autodiff scalar (cppad) by C++ double and can run much faster (more than 5x).
+
+To make this change, we first uncomment 
+```cpp
+// #define FORWARD_ONLY
+```
+in `python/pydifem.cc` and then run 
+```bash
+python setup.py install
+```
+
+1. Baymax (Fig. 1 in the paper)
+```bash
+python python/demo_baymax.py
+```
+2. Clothball (Fig. 2 in the paper)
+```bash
+python python/demo_cloth_ball.py
+```
+
+For the above 2 experiments, the output meshes are stored in `out_test/`
 ## Our Related Repos
 Differentiable Soft Body Dynamics (this repo) [Code](https://github.com/YilingQiao/diff_fem) [Paper](http://vladlen.info/publications/differentiable-simulation-soft-multi-body-systems/)
 *Differentiable Simulation of Soft Multi-body Systems. Yi-Ling Qiao, Junbang Liang, Vladlen Koltun, Ming C. Lin. (Neurips 2021)*

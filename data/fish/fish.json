@@ -1,0 +1,66 @@
+{
+    "Parameters" : [
+        {
+            "Simulation HZ" : 200,
+            "Self-collision" : false,
+            "Self-collision tolerance" : 5.0e-2,
+            "Gravity" : [0.0, 0.0, 0],
+            "Is underwater": 1,
+            "Is skeleton actuated": 1,
+            "GravityY": 0,
+        }
+    ],
+    
+    "Friction coefficients" : [
+        [ 0.1 ]
+    ],
+    
+    "Meshes" : [
+        {
+            "Actuator type": 1,
+            "Mass": 10,
+            "Obj filename" : "fish/fish400_tet.obj",
+            "Center Index": 63,
+            "End Effector Index": 330,
+            "Local Contour Index": [63, 68, 85],
+            "Type": "Soft Articulated",
+            "Muscle Stiffness" : 5e5,
+            "Actuator type": 1,
+            "Youngs Modulus" : 2e5,
+            "Poisson Ratio" : 0.4,
+            "Material Identifier" : 0,
+            "Attach y": -0.27,
+            "Attach Stiffness": 1e20,
+            "Bones": [
+                {
+                    "Parent ID": -1, 
+                    "Joint Type": "ALL",
+                    "Joint Pos": [0,0,0],
+                    "Joint Axis": [0,0,0],  
+                    "Vertices": [554, 616, 530, 539,661, 460, 628, 608, 556, 614, 700, 729, 687, 602, 663, 520, 509, 518, 519, 617, 555]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL", 
+                    "Joint Pos": [0.000151, 0.038025, -0.155286],
+                    "Joint Axis": [1, 0, 0],
+                    "Vertices": [505, 563, 510, 508, 456, 468]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL", 
+                    "Joint Pos": [-0.046652, 0.042769, 0.045813],
+                    "Joint Axis": [0, 0, 1],
+                    "Vertices": [496, 511, 537, 560, 459, 633, 547, 551, 606, 526, 467]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL", 
+                    "Joint Pos": [0.046652, 0.042769, 0.045813],
+                    "Joint Axis": [0, 0, 1],
+                    "Vertices": [625, 632, 561, 584, 477, 546, 549]
+                }
+            ]
+        }
+    ]
+}

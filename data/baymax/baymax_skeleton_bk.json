@@ -1,0 +1,83 @@
+{
+    "Parameters" : [
+        {
+            "Frame number" : 350,
+            "LocalGlobal" : 20,
+            "Signal": 1,
+            "Simulation HZ" : 100,
+            "Type" : "friction",
+            "Steps per frame" : 7,
+            "Self-collision" : false,
+            "Self-collision tolerance" : 5.0e-2,
+            "GravityY" : -9.8,
+            "Is underwater": 0,
+            "Air damping" : 0.0e-5
+        }
+    ], 
+    "Friction coefficients" : [
+        [ 0.1 ]
+    ],
+    "Meshes" : [
+        {
+            "Friction coefficients" : [
+                [ 0.1 ]
+            ],
+            "Enable Gravity": 1,
+            "Scale": 1,
+            "Actuator type": 0,
+            "Obj filename" : "baymax/baymax500_tet.obj",
+            "Center Index": 63,
+            "End Effector Index": 330,
+            "Local Contour Index": [63, 68, 85],
+            "Type": "Soft Articulated",
+            "Muscle Stiffness" : 5e5,
+            "Youngs Modulus" : 8e2,
+            "Poisson Ratio" : 0.4,
+            "Material Identifier" : 0,
+            "Bones": [
+                {
+                    "Parent ID": -1, 
+                    "Joint Type": "ALL",
+                    "Joint Pos": [0,0,0],
+                    "Joint Axis": [0,0,0],  
+                    "Vertices": [585,678,566,551,541,510,560]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL", 
+                    "Joint Pos": [-0.223, 0.6132, 0],
+                    "Joint Axis": [0, 0, 1],
+                    "Vertices": [32,66,246,61,54,58,50,436,439]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL", 
+                    "Joint Pos": [0.3194, 0.6416, 0],
+                    "Joint Axis": [0, 0, 1],
+                    "Vertices": [372,249,29,4,12,11,31,30]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL", 
+                    "Joint Pos": [-0.502, 2.306, 0],
+                    "Joint Axis": [0, 0, 1],
+                    "Vertices": [173,310,474,492,197,169]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL", 
+                    "Joint Pos": [0.5053, 2.2895, 0],
+                    "Joint Axis": [0, 0, 1],
+                    "Vertices": [380,374,292,126,131,129,384,108]
+                }
+            ]
+        }
+    ],
+    "Obstacles" : [
+        {
+            "Obj filename" : "baymax/cloth.obj",
+            "Scale": 1,
+            "Collision tolerance" : 1.5e-2
+        }
+    ]
+}

@@ -124,6 +124,56 @@ DrawCollisionMesh(World<double, DoubleUtils>* world,const Eigen::Vector3d& eye)
 
 void 
 GUI::
+DrawObs(Dfobstacle<double, DoubleUtils>* Dfobs,const Eigen::Vector3d& eye)
+{
+	glEnable(GL_LIGHTING); 
+	std::vector<std::pair<int,double>> sorted_contours;
+
+	auto &pos = Dfobs->mMesh->GetVertices();
+	const std::vector<Eigen::Vector3i>& contours = Dfobs->mMesh->mTriangles;
+
+	const Eigen::VectorXd& v_n = Dfobs->mVertexNormal;
+
+	for(int i=0; i<contours.size(); i++)
+	{
+		const Eigen::Vector3i& c = contours[i];
+		int idx0 = (c)[0];
+		int idx1 = (c)[1];
+		int idx2 = (c)[2];
+
+		Eigen::Vector3d p0 = pos[idx0];
+		Eigen::Vector3d p1 = pos[idx1];
+		Eigen::Vector3d p2 = pos[idx2];
+
+		Eigen::Vector3d center = 0.3333*(p0+p1+p2);
+
+		sorted_contours.push_back(std::make_pair(i,(center-eye).norm()));
+	}
+	std::sort(sorted_contours.begin(), sorted_contours.end(), [](const std::pair<int, double>& A, const std::pair<int, double>& B){
+		return A.second > B.second;
+	});
+	for(int i=0; i<sorted_contours.size(); i++)
+	{
+		const auto& c = contours[sorted_contours[i].first];
+		int idx0 = (c)[0];
+		int idx1 = (c)[1];
+		int idx2 = (c)[2];
+
+		Eigen::Vector3d p0 = pos[idx0];
+		Eigen::Vector3d p1 = pos[idx1];
+		Eigen::Vector3d p2 = pos[idx2];
+
+		Eigen::Vector3d n0 = v_n.block<3,1>(3*idx0,0);
+		Eigen::Vector3d n1 = v_n.block<3,1>(3*idx1,0);
+		Eigen::Vector3d n2 = v_n.block<3,1>(3*idx2,0);
+
+		GUI::DrawTriangle(p0,p1,p2,n0,n1,n2,Eigen::Vector4d(200.0/256.0,200.0/256.0,200.0/256.0,0.4));
+	}
+	glDisable(GL_LIGHTING);
+}
+
+void 
+GUI::
 DrawCharacter(Dfobj<double, DoubleUtils>* Dfobj,const Eigen::VectorXd& x,const Eigen::Vector3d& eye)
 {
 	glEnable(GL_LIGHTING); 

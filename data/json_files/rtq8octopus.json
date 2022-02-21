@@ -1,0 +1,207 @@
+{
+    "Parameters" : [
+        {
+        "Self-collision" : false,
+        "Self-collision tolerance" : 5.0e-2,
+        "Gravity" : [0.0, 0.0, -9.81],
+        "Air damping" : 0.0e-5
+        }
+    ],
+    
+    "Friction coefficients" : [
+        [ 0.1 ]
+    ],
+    
+    "Meshes" : [
+        {
+            "Obj filename" : "octopus.obj",
+            "Muscle filename" : "octopus.muscle",
+            "Sampling filename" : "octopus.sampling",
+            "Center Index": 63,
+            "End Effector Index": 330,
+            "Local Contour Index": [63, 68, 85],
+            "Type": "Soft Articulated",
+            "Muscle Stiffness" : 5e5,
+            "Youngs Modulus" : 2e5,
+            "Poisson Ratio" : 0.4,
+            "Material Identifier" : 0,
+            "Bones": [
+                {
+                    "Parent ID": -1,
+                    "Joint Type": "ALL",
+                    "Joint Pos": [0,0,0],
+                    "Joint Axis": [0,0,0],
+                    "Vertices": [24, 26, 30, 34, 38, 46, 48, 58, 77, 80, 106, 343, 593, 597, 627, 628, 631, 634, 842, 880, 881, 883, 884, 885, 900, 913, 916, 959, 961, 963, 72]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.00099676, -0.0521295, 0.000408051],
+                    "Joint Axis": [-0.382683, 0, -0.92388],
+                    "Vertices": [563, 699, 704]
+                },
+                {
+                    "Parent ID": 1,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [0.142905, -0.143601, -0.0585815],
+                    "Joint Axis": [-0.382683,         0,  -0.92388],
+                    "Vertices": [163, 724, 235]
+                },
+                {
+                    "Parent ID": 2,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [0.382789, -0.320836, -0.157444],
+                    "Joint Axis": [-0.382683,         0,  -0.92388],
+                    "Vertices": [415, 789, 187]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.00099676,  -0.0521295, 0.000408051],
+                    "Joint Axis": [-0.92388,         0, -0.382683],
+                    "Vertices": [244, 391, 873]
+                },
+                {
+                    "Parent ID": 4,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [0.0402072, -0.0904795,  -0.097069],
+                    "Joint Axis": [-0.92388,         0, -0.382683],
+                    "Vertices": [213, 483, 125]
+                },
+                {
+                    "Parent ID": 5,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [0.144411,  -0.29495, -0.346712],
+                    "Joint Axis": [-0.92388,         0, -0.382683],
+                    "Vertices": [317, 375, 526]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.00099676,  -0.0521295, 0.000408051],
+                    "Joint Axis": [-0.92388,        0, 0.382683],
+                    "Vertices": [40, 264, 692, 651]
+                },
+                {
+                    "Parent ID": 7,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.0613765,  -0.145559,  -0.148396],
+                    "Joint Axis": [-0.92388,        0, 0.382683],
+                    "Vertices": [147, 148, 261, 621, 673]
+                },
+                {
+                    "Parent ID": 8,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.14784,  -0.28665, -0.361302],
+                    "Joint Axis": [-0.92388,        0, 0.382683],
+                    "Vertices": [123, 194, 398, 809]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.00099676,  -0.0521295, 0.000408051],
+                    "Joint Axis": [-0.382683,         0,   0.92388],
+                    "Vertices": [21, 544, 547]
+                },
+                {
+                    "Parent ID": 10,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.123924,  -0.110157, -0.0501575],
+                    "Joint Axis": [-0.382683,         0,   0.92388],
+                    "Vertices": [247, 267, 293]
+                },
+                {
+                    "Parent ID": 11,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.329915, -0.281607, -0.138325],
+                    "Joint Axis": [-0.382683,         0,   0.92388],
+                    "Vertices": [14, 137, 311]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.00099676,  -0.0521295, 0.000408051],
+                    "Joint Axis": [0.382683,        0,  0.92388],
+                    "Vertices": [262, 322, 641, 740, 585]
+                },
+                {
+                    "Parent ID": 13,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.192924, -0.180894,  0.079325],
+                    "Joint Axis": [0.382683,        0,  0.92388],
+                    "Vertices": [119, 120, 668, 335]
+                },
+                {
+                    "Parent ID": 14,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.377256, -0.298529,  0.154469],
+                    "Joint Axis": [0.382683,        0,  0.92388],
+                    "Vertices": [200, 387, 199]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.00099676,  -0.0521295, 0.000408051],
+                    "Joint Axis": [0.92388,        0, 0.382683],
+                    "Vertices": [478, 683, 607]
+                },
+                {
+                    "Parent ID": 16,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.0616355,  -0.146109,   0.149193],
+                    "Joint Axis": [0.92388,        0, 0.382683],
+                    "Vertices": [6, 272, 503, 424]
+                },
+                {
+                    "Parent ID": 17,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.149643, -0.303684,  0.359699],
+                    "Joint Axis": [0.92388,        0, 0.382683],
+                    "Vertices": [516, 795]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.00099676,  -0.0521295, 0.000408051],
+                    "Joint Axis": [0.92388,         0, -0.382683],
+                    "Vertices": [10, 482, 804]
+                },
+                {
+                    "Parent ID": 19,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [0.0686455, -0.161818,  0.168183],
+                    "Joint Axis": [0.92388,         0, -0.382683],
+                    "Vertices": [183, 533, 154]
+                },
+                {
+                    "Parent ID": 20,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [0.164328, -0.311797,  0.394059],
+                    "Joint Axis": [0.92388,         0, -0.382683],
+                    "Vertices": [435, 890]
+                },
+                {
+                    "Parent ID": 0,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [-0.00099676,  -0.0521295, 0.000408051],
+                    "Joint Axis": [0.382683,        0, -0.92388],
+                    "Vertices": [354, 600, 379]
+                },
+                {
+                    "Parent ID": 22,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [0.120907, -0.125793,  0.051366],
+                    "Joint Axis": [0.382683,        0, -0.92388],
+                    "Vertices": [225, 793, 175]
+                },
+                {
+                    "Parent ID": 23,
+                    "Joint Type": "ROTATIONAL",
+                    "Joint Pos": [0.360713, -0.306194,  0.150478],
+                    "Joint Axis": [0.382683,        0, -0.92388],
+                    "Vertices": [5, 344]
+                }
+            ]
+        }
+    ]
+}
