@@ -44,8 +44,18 @@ python python/demo_br.py
 
 For the above 2 experiments, the output meshes are stored in `out/`
 ### Control Problems
+1. Drone (Fig. 4a in the paper)
 TODO
 
+2. Octopus (Fig. 4b in the paper)
+```bash
+python python/demo_octopus.py
+```
+
+3. Fish (Fig. 4c in the paper)
+TODO
+
+For the above experiments, the output meshes are stored in `out_test/`
 ### Forward Simulation
 Note that our simulator can be used for pure forward simulation. In this case, we replace the autodiff scalar (cppad) by C++ double and can run much faster (more than 5x).
 
@@ -67,7 +77,7 @@ python python/demo_baymax.py
 python python/demo_cloth_ball.py
 ```
 
-For the above 2 experiments, the output meshes are stored in `out_test/`
+For the above experiments, the output meshes are stored in `out_test/`
 ## Our Related Repos
 Differentiable Soft Body Dynamics (this repo) [Code](https://github.com/YilingQiao/diff_fem) [Paper](http://vladlen.info/publications/differentiable-simulation-soft-multi-body-systems/)
 *Differentiable Simulation of Soft Multi-body Systems. Yi-Ling Qiao, Junbang Liang, Vladlen Koltun, Ming C. Lin. (Neurips 2021)*
