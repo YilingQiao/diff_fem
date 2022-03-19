@@ -28,6 +28,7 @@ git clone git@github.com:YilingQiao/diff_fem.git
 cd diff_fem
 git submodule init
 git submodule update
+sudo apt-get install ninja-build cppad
 python setup.py install
 ```
 3. Run the examples

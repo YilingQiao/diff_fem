@@ -34,7 +34,7 @@ endif()
 if (NOT RAPIDJSON_INCLUDEDIR)
   set(RAPIDJSON_INCLUDEDIR "${CMAKE_CURRENT_SOURCE_DIR}/extern/rapidjson/include")
 endif()
-include_directories("${RAPIDJSON_INCLUDE_DIRS}")
+include_directories("${RAPIDJSON_INCLUDEDIR}")
 find_package(rapidjson REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${RAPIDJSON_CXX_FLAGS}")
 
